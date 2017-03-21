@@ -1102,6 +1102,7 @@ struct _LinphoneCore
 
 	LinphoneAddress *default_rls_addr; /*default resource list server*/
 	LinphoneImEncryptionEngine *im_encryption_engine;
+	struct _LinphoneAccountCreatorRequestCbs *default_ac_request_cbs;
 	MSBandwidthController *bw_controller;
 };
 
@@ -1390,6 +1391,9 @@ BELLE_SIP_DECLARE_VPTR(LinphoneXmlRpcSession);
 struct _LinphoneAccountCreatorRequestCbs {
 	belle_sip_object_t base;
 	void *user_data;
+
+	LinphoneAccountCreatorRequestFunc account_creator_request_constructor_cb; /**< Constructor */
+	LinphoneAccountCreatorRequestFunc account_creator_request_destructor_cb; /**< Destructor */
 
 	LinphoneAccountCreatorRequestFunc create_account_request_cb; /**< Request to create account */
 	LinphoneAccountCreatorRequestFunc is_account_exist_request_cb; /**< Request to know if account exist */
