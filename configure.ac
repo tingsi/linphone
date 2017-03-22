@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([linphone],[3.10.2],[linphone-developers@nongnu.org])
+AC_INIT([linphone],[3.11.1],[linphone-developers@nongnu.org])
 AC_CANONICAL_SYSTEM
 AC_CONFIG_SRCDIR([coreapi/linphonecore.c])
 
@@ -30,7 +30,7 @@ AC_SUBST(LINPHONE_VERSION)
 AC_MSG_NOTICE([$PACKAGE_NAME-$PACKAGE_VERSION		A full featured audio/video sip phone.])
 AC_MSG_NOTICE([licensed under the terms of the General Public License (GPL)])
 
-AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
+AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects foreign])
 AC_SUBST([LIBTOOL_DEPS])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])],)
 AC_SUBST([docdir], [${datadir}/doc])
@@ -85,6 +85,8 @@ case $target in
 	;;
 
 esac
+
+CXXFLAGS="${CXXFLAGS} -std=c++11"
 
 AM_CONDITIONAL(BUILD_IOS, test x$ios_found = xyes)
 
@@ -557,6 +559,8 @@ AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${package_prefix}/${DATADIRNAME}",[Defines
 dnl Set PACKAGE_SOUND_DIR in config.h.
 AC_DEFINE_UNQUOTED(PACKAGE_SOUND_DIR, "${package_prefix}/${DATADIRNAME}/sounds/linphone",[Defines the place where linphone sounds are found])
 
+dnl Set PACKAGE_RING_DIR in config.h.
+AC_DEFINE_UNQUOTED(PACKAGE_RING_DIR, "${package_prefix}/${DATADIRNAME}/sounds/linphone/rings",[Defines the place where linphone rings are found])
 
 dnl check if we have the getifaddrs() sytem call
 AC_CHECK_FUNCS(getifaddrs)
@@ -819,7 +823,7 @@ AC_ARG_ENABLE(external-ortp,
 		no)	external_ortp=false ;;
 		*)	AC_MSG_ERROR(bad value ${enableval} for --enable-external-ortp) ;;
 	esac],
-	[external_ortp=false]
+	[external_ortp=$(if test -d oRTP; then printf false; else printf true; fi)]
 )
 
 if test "$external_ortp" = 'true'; then
@@ -847,7 +851,7 @@ AC_SUBST([ORTP_DIR])
 
 AC_ARG_ENABLE([external-mediastreamer],
 	[AS_HELP_STRING([--enable-external-mediastreamer],[Use external mediastreamer library])],,
-	[enable_external_mediastreamer=no]
+	[enable_external_mediastreamer=$(if test -d mediastreamer2; then printf no; else printf yes; fi)]
 )
 
 AS_CASE($enable_external_mediastreamer,

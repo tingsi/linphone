@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 #ifndef _WIN32
-#if !defined(__QNXNTO__)
+#if !defined(__QNXNTO__) && !(defined(__ANDROID__) && defined(__LP64__))
 #	include <langinfo.h>
 #	include <locale.h>
 #	include <iconv.h>
@@ -115,6 +115,28 @@ static int sqlite3bctbx_Write(sqlite3_file *p, const void *buf, int count, sqlit
 	return SQLITE_IOERR_WRITE;
 }
 
+/**
+ * TRuncates or extends a file depending on the size provided.
+ * @param  p    sqlite3_file file handle pointer.
+ * @param  size New file size.
+ * @return  SQLITE_OK on success, SQLITE_IOERR_TRUNCATE if an error occurred during truncate,	
+ *          SQLITE_ERROR if ther was a problem on the file descriptor.    
+ */
+static int sqlite3bctbx_Truncate(sqlite3_file *p, sqlite_int64 size){
+	int rc;                        
+	sqlite3_bctbx_file_t *pFile = (sqlite3_bctbx_file_t*) p;
+	if (pFile->pbctbx_file){
+		rc = bctbx_file_truncate(pFile->pbctbx_file, size);
+		if( rc < 0 ) {
+			return SQLITE_IOERR_TRUNCATE;
+		}
+		if (rc == 0){
+			return SQLITE_OK;
+		}
+	}
+	return SQLITE_ERROR;
+
+}
 
 /**
  * Saves the file size associated with the file handle p into the argument pSize.
@@ -259,7 +281,7 @@ static char* ConvertFromUtf8Filename(const char* fName){
 	}
 	bctbx_free(wideFilename);
 	return convertedFilename;
-#elif defined(__QNXNTO__) || (defined(ANDROID) && defined(__LP64__))
+#elif defined(__QNXNTO__) || (defined(__ANDROID__) && defined(__LP64__))
 	return bctbx_strdup(fName);
 #else
 	#define MAX_PATH_SIZE 1024
@@ -304,7 +326,7 @@ static  int sqlite3bctbx_Open(sqlite3_vfs *pVfs, const char *fName, sqlite3_file
 		sqlite3bctbx_Close,                 	/* xClose */
 		sqlite3bctbx_Read,                  	/* xRead */
 		sqlite3bctbx_Write,                 	/* xWrite */
-		NULL,									/* xTruncate */
+		sqlite3bctbx_Truncate,					/* xTruncate */
 		sqlite3bctbx_Sync,
 		sqlite3bctbx_FileSize,
 		sqlite3bctbx_nolockLock,

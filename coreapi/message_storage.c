@@ -28,7 +28,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #endif
 
 #ifndef _WIN32
-#if !defined(__QNXNTO__)
+#if !defined(__QNXNTO__) && !(defined(__ANDROID__) && defined(__LP64__))
+#include <ctype.h>
 #include <langinfo.h>
 #include <locale.h>
 #include <iconv.h>
@@ -50,7 +51,7 @@ static char *utf8_convert(const char *filename){
 	wchar_t db_file_utf16[MAX_PATH_SIZE]={0};
 	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, filename, -1, db_file_utf16, MAX_PATH_SIZE);
 	WideCharToMultiByte(CP_UTF8, 0, db_file_utf16, -1, db_file_utf8, sizeof(db_file_utf8), NULL, NULL);
-#elif defined(__QNXNTO__) || (defined(ANDROID) && defined(__LP64__))
+#elif defined(__QNXNTO__) || (defined(__ANDROID__) && defined(__LP64__))
 	strncpy(db_file_utf8, filename, MAX_PATH_SIZE - 1);
 #else
 	char db_file_locale[MAX_PATH_SIZE] = {'\0'};
@@ -101,7 +102,10 @@ int _linphone_sqlite3_open(const char *db_file, sqlite3 **db) {
 		ms_error("Cannot set sqlite3 temporary store to memory: %s.", errmsg);
 		sqlite3_free(errmsg);
 	}
-#if TARGET_OS_IPHONE
+
+	/* the lines below have been disabled because they are likely an
+	 * outdated hack */
+#if 0 && TARGET_OS_IPHONE
 	ret = sqlite3_exec(*db, "PRAGMA journal_mode = OFF", NULL, NULL, &errmsg);
 	if (ret != SQLITE_OK) {
 		ms_error("Cannot set sqlite3 journal_mode to off: %s.", errmsg);

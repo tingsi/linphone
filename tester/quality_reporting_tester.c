@@ -310,7 +310,7 @@ static void quality_reporting_session_report_if_video_stopped(void) {
 		linphone_call_params_unref(pauline_params);
 		pauline_params=linphone_core_create_call_params(pauline->lc, call_pauline);
 		linphone_call_params_enable_video(pauline_params,FALSE);
-		linphone_core_update_call(pauline->lc,call_pauline,pauline_params);
+		linphone_call_update(call_pauline,pauline_params);
 		linphone_call_params_unref(pauline_params);
 
 		BC_ASSERT_TRUE(wait_for_until(marie->lc,pauline->lc,&marie->stat.number_of_LinphonePublishProgress,1,10000));
@@ -343,9 +343,10 @@ static void quality_reporting_sent_using_custom_route(void) {
 	LinphoneCall* call_marie = NULL;
 	LinphoneCall* call_pauline = NULL;
 
-	LinphoneCoreVTable publish_vtable = {0};
-	publish_vtable.publish_state_changed = publish_report_with_route_state_changed;
-	linphone_core_add_listener(marie->lc, &publish_vtable);
+	LinphoneCoreCbs *cbs = linphone_factory_create_core_cbs(linphone_factory_get());
+	linphone_core_cbs_set_publish_state_changed(cbs, publish_report_with_route_state_changed);
+	linphone_core_add_callbacks(marie->lc, cbs);
+	linphone_core_cbs_unref(cbs);
 
 	//INVALID collector: sip.linphone.org do not collect reports, so it will throw a 404 Not Found error
 	linphone_proxy_config_set_quality_reporting_collector(linphone_core_get_default_proxy_config(marie->lc), "sip:sip.linphone.org");
@@ -417,7 +418,7 @@ static void quality_reporting_interval_report_video_and_rtt(void) {
 		
 		end_call(marie, pauline);
 		/*wait that all publish complete*/
-		BC_ASSERT_TRUE(wait_for_until(marie->lc,pauline->lc,&marie->stat.number_of_LinphonePublishOk,marie->stat.number_of_LinphonePublishProgress,15000));
+		BC_ASSERT_TRUE(wait_for_until(marie->lc,pauline->lc,&marie->stat.number_of_LinphonePublishOk,marie->stat.number_of_LinphonePublishProgress,60000));
 	}
 
 	linphone_call_params_unref(marie_params);

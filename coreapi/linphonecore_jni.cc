@@ -41,11 +41,10 @@ extern "C" {
 
 #include "linphone/lpconfig.h"
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #include <android/log.h>
-
 #include <belle-sip/wakelock.h>
-#endif /*ANDROID*/
+#endif /* __ANDROID__ */
 
 #define RETURN_USER_DATA_OBJECT(javaclass, funcprefix, cobj) \
 	{ \
@@ -75,7 +74,7 @@ static jobject create_java_linphone_buffer(JNIEnv *env, const LinphoneBuffer *bu
 static LinphoneBuffer* create_c_linphone_buffer_from_java_linphone_buffer(JNIEnv *env, jobject jbuffer);
 static jobject getTunnelConfig(JNIEnv *env, LinphoneTunnelConfig *cfg);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 void linphone_android_log_handler(int prio, char *str) {
 	char *current;
 	char *next;
@@ -159,15 +158,14 @@ extern "C" void setMediastreamerAndroidContext(JNIEnv *env, void *context) {
 	jmethodID set_context = env->GetStaticMethodID(ms_class, "setContext", "(Ljava/lang/Object;)V");
 	env->CallStaticVoidMethod(ms_class, set_context, (jobject)context);
 }
-#endif /*ANDROID*/
+#endif /* __ANDROID__ */
 
 
 JNIEXPORT jint JNICALL  JNI_OnLoad(JavaVM *ajvm, void *reserved)
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
 	ms_set_jvm(ajvm);
-
-#endif /*ANDROID*/
+#endif /* __ANDROID__ */
 	jvm=ajvm;
 	return JNI_VERSION_1_2;
 }
@@ -318,6 +316,8 @@ public:
 
 		notifyRecvId = env->GetMethodID(listenerClass,"notifyReceived", "(Lorg/linphone/core/LinphoneCore;Lorg/linphone/core/LinphoneEvent;Ljava/lang/String;Lorg/linphone/core/LinphoneContent;)V");
 
+		networkReachableId = env->GetMethodID(listenerClass,"networkReachableChanged", "(Lorg/linphone/core/LinphoneCore;Z)V");
+
 		configuringStateClass = (jclass)env->NewGlobalRef(env->FindClass("org/linphone/core/LinphoneCore$RemoteProvisioningState"));
 		configuringStateFromIntId = env->GetStaticMethodID(configuringStateClass,"fromInt","(I)Lorg/linphone/core/LinphoneCore$RemoteProvisioningState;");
 		configuringStateId = env->GetMethodID(listenerClass,"configuringStatus","(Lorg/linphone/core/LinphoneCore;Lorg/linphone/core/LinphoneCore$RemoteProvisioningState;Ljava/lang/String;)V");
@@ -445,6 +445,7 @@ public:
 	jmethodID authenticationRequestedId;
 	jmethodID publishStateId;
 	jmethodID notifyRecvId;
+	jmethodID networkReachableId;
 
 	jclass authMethodClass;
 	jmethodID authMethodFromIntId;
@@ -872,6 +873,10 @@ public:
 
 		if (ljb->notifyRecvId) {
 			vTable->notify_received = notifyReceived;
+		}
+
+		if (ljb->networkReachableId) {
+			vTable->network_reachable = networkReachableCb;
 		}
 
 		if (ljb->configuringStateId) {
@@ -1394,6 +1399,21 @@ public:
 							,env->NewStringUTF(evname)
 							,content ? create_java_linphone_content(env,content) : NULL
 							);
+		handle_possible_java_exception(env, lcData->listener);
+	}
+
+	static void networkReachableCb(LinphoneCore *lc, bool_t enable){
+		JNIEnv *env = 0;
+		jint result = jvm->AttachCurrentThread(&env,NULL);
+		if (result != 0) {
+			ms_error("cannot attach VM");
+			return;
+		}
+
+		LinphoneJavaBindings *ljb = (LinphoneJavaBindings *)linphone_core_get_user_data(lc);
+		LinphoneCoreVTable *table = linphone_core_get_current_vtable(lc);
+		LinphoneCoreData* lcData = (LinphoneCoreData*)linphone_core_v_table_get_user_data(table);
+		env->CallVoidMethod(lcData->listener, ljb->networkReachableId, lcData->core, (jboolean)enable);
 		handle_possible_java_exception(env, lcData->listener);
 	}
 
@@ -3846,6 +3866,13 @@ extern "C" void Java_org_linphone_core_LinphoneFriendListImpl_setRLSUri(JNIEnv* 
 	if (jrlsUri) ReleaseStringUTFChars(env, jrlsUri, uri);
 }
 
+extern "C" jstring Java_org_linphone_core_LinphoneFriendListImpl_getRLSUri(JNIEnv*  env
+																		,jobject  thiz
+																		,jlong ptr) {
+	const char *uri = linphone_friend_list_get_rls_uri((LinphoneFriendList*)ptr);
+	return uri ? env->NewStringUTF(uri) : NULL;
+}
+
 extern "C" void Java_org_linphone_core_LinphoneFriendListImpl_setRLSAddress(JNIEnv*  env
 																		,jobject  thiz
 																		,jlong ptr
@@ -5495,6 +5522,12 @@ extern "C" jobject Java_org_linphone_core_LinphoneCallImpl_getConference(JNIEnv 
 	return NULL;
 }
 
+extern "C" jboolean Java_org_linphone_core_LinphoneCallImpl_askedToAutoAnswer(JNIEnv*  env,jobject thiz,jlong ptr) {
+	LinphoneCall *call = (LinphoneCall *) ptr;
+	return (jboolean)linphone_call_asked_to_autoanswer(call);
+}
+
+
 extern "C" jfloat Java_org_linphone_core_LinphoneCallImpl_getPlayVolume(JNIEnv* env, jobject thiz, jlong ptr) {
 	LinphoneCall *call = (LinphoneCall *) ptr;
 	return (jfloat)linphone_call_get_play_volume(call);
@@ -5721,7 +5754,7 @@ extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setAudioDscp(JNIEnv* env
 }
 
 extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setAndroidPowerManager(JNIEnv *env, jclass cls, jobject pm) {
-#ifdef ANDROID
+#ifdef __ANDROID__
 	if(pm != NULL) belle_sip_wake_lock_init(env, pm);
 	else belle_sip_wake_lock_uninit(env);
 #endif
@@ -5729,7 +5762,7 @@ extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setAndroidPowerManager(J
 
 /*released in Java_org_linphone_core_LinphoneCoreImpl_delete*/
 extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setAndroidWifiLock(JNIEnv *env, jobject thiz, jlong ptr, jobject wifi_lock) {
-#ifdef ANDROID
+#ifdef __ANDROID__
 	LinphoneCore *lc=(LinphoneCore*)ptr;
 	if (lc->wifi_lock) {
 		env->DeleteGlobalRef(lc->wifi_lock);
@@ -5749,7 +5782,7 @@ extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setAndroidWifiLock(JNIEn
 }
 /*released in Java_org_linphone_core_LinphoneCoreImpl_delete*/
 extern "C" void Java_org_linphone_core_LinphoneCoreImpl_setAndroidMulticastLock(JNIEnv *env, jobject thiz, jlong ptr, jobject multicast_lock) {
-#ifdef ANDROID
+#ifdef __ANDROID__
 	LinphoneCore *lc=(LinphoneCore*)ptr;
 	if (lc->multicast_lock) {
 		env->DeleteGlobalRef(lc->multicast_lock);
@@ -7876,8 +7909,6 @@ extern "C" void Java_org_linphone_core_LinphoneConferenceParamsImpl_enableVideo(
 extern "C" jboolean Java_org_linphone_core_LinphoneConferenceParamsImpl_isVideoRequested(JNIEnv *env, jobject thiz, jlong paramsPtr) {
 	return linphone_conference_params_video_requested((LinphoneConferenceParams *)paramsPtr);
 }
-
-
 
 extern "C" jobjectArray Java_org_linphone_core_LinphoneConferenceImpl_getParticipants(JNIEnv *env, jobject thiz, jlong pconference) {
 	bctbx_list_t *participants, *it;

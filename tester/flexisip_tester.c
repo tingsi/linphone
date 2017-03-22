@@ -221,7 +221,7 @@ static void call_forking(void){
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie3->stat.number_of_LinphoneCallIncomingReceived,1,3000));
 
 	/*marie accepts the call on its first device*/
-	linphone_core_accept_call(marie->lc,linphone_core_get_current_call(marie->lc));
+	linphone_call_accept(linphone_core_get_current_call(marie->lc));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallConnected,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallStreamsRunning,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallConnected,1,1000));
@@ -231,7 +231,7 @@ static void call_forking(void){
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie2->stat.number_of_LinphoneCallEnd,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie3->stat.number_of_LinphoneCallEnd,1,1000));
 
-	linphone_core_terminate_call(pauline->lc,linphone_core_get_current_call(pauline->lc));
+	linphone_call_terminate(linphone_core_get_current_call(pauline->lc));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallEnd,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallEnd,1,1000));
 
@@ -270,13 +270,13 @@ static void call_forking_with_urgent_reply(void){
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallIncomingReceived,1,1000));
 
 		/*marie accepts the call on its first device*/
-		linphone_core_accept_call(marie->lc,linphone_core_get_current_call(marie->lc));
+		linphone_call_accept(linphone_core_get_current_call(marie->lc));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallConnected,1,1000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallStreamsRunning,1,1000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallConnected,1,1000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallStreamsRunning,1,1000));
 
-		linphone_core_terminate_call(pauline->lc,linphone_core_get_current_call(pauline->lc));
+		linphone_call_terminate(linphone_core_get_current_call(pauline->lc));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallEnd,1,1000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallEnd,1,1000));
 	}
@@ -312,7 +312,7 @@ static void call_forking_cancelled(void){
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie3->stat.number_of_LinphoneCallIncomingReceived,1,1000));
 
 	/*pauline finally cancels the call*/
-	linphone_core_terminate_call(pauline->lc,linphone_core_get_current_call(pauline->lc));
+	linphone_call_terminate(linphone_core_get_current_call(pauline->lc));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallEnd,1,1000));
 
 	/*all devices should stop ringing*/
@@ -352,7 +352,7 @@ static void call_forking_declined(bool_t declined_globaly){
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie3->stat.number_of_LinphoneCallIncomingReceived,1,1000));
 
 	/*marie finally declines the call*/
-	linphone_core_decline_call(marie->lc,linphone_core_get_current_call(marie->lc),
+	linphone_call_decline(linphone_core_get_current_call(marie->lc),
 		declined_globaly ? LinphoneReasonDeclined : LinphoneReasonBusy
 	);
 
@@ -364,13 +364,13 @@ static void call_forking_declined(bool_t declined_globaly){
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie3->stat.number_of_LinphoneCallEnd,1,1000));
 	}else{
 		/*pauline should continue ringing and be able to hear a call taken by marie2 */
-		linphone_core_accept_call(marie2->lc, linphone_core_get_current_call(marie2->lc));
+		linphone_call_accept(linphone_core_get_current_call(marie2->lc));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallStreamsRunning,1,2000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie2->stat.number_of_LinphoneCallStreamsRunning,1,2000));
 		liblinphone_tester_check_rtcp(pauline,marie2);
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallEnd,1,3000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie3->stat.number_of_LinphoneCallEnd,1,3000));
-		linphone_core_terminate_call(marie2->lc,linphone_core_get_current_call(marie2->lc));
+		linphone_call_terminate(linphone_core_get_current_call(marie2->lc));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie2->stat.number_of_LinphoneCallEnd,1,3000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallEnd,1,3000));
 	}
@@ -423,7 +423,7 @@ static void call_forking_with_push_notification_single(void){
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallOutgoingRinging,1,1000));
 
 	/*marie accepts the call*/
-	linphone_core_accept_call(marie->lc,linphone_core_get_current_call(marie->lc));
+	linphone_call_accept(linphone_core_get_current_call(marie->lc));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallConnected,1,5000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallStreamsRunning,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallConnected,1,1000));
@@ -431,7 +431,7 @@ static void call_forking_with_push_notification_single(void){
 
 	liblinphone_tester_check_rtcp(pauline,marie);
 
-	linphone_core_terminate_call(pauline->lc,linphone_core_get_current_call(pauline->lc));
+	linphone_call_terminate(linphone_core_get_current_call(pauline->lc));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallEnd,1,5000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallEnd,1,5000));
 
@@ -471,7 +471,7 @@ static void call_forking_with_push_notification_multiple(void){
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie2->stat.number_of_LinphoneCallIncomingReceived,1,5000));
 
 	/*marie2 accepts the call*/
-	linphone_core_accept_call(marie2->lc,linphone_core_get_current_call(marie2->lc));
+	linphone_call_accept(linphone_core_get_current_call(marie2->lc));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallConnected,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallStreamsRunning,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie2->stat.number_of_LinphoneCallConnected,1,1000));
@@ -482,7 +482,7 @@ static void call_forking_with_push_notification_multiple(void){
 
 	liblinphone_tester_check_rtcp(pauline,marie2);
 
-	linphone_core_terminate_call(pauline->lc,linphone_core_get_current_call(pauline->lc));
+	linphone_call_terminate(linphone_core_get_current_call(pauline->lc));
 
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallEnd,1,1000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie2->stat.number_of_LinphoneCallEnd,1,1000));
@@ -584,7 +584,7 @@ static void early_media_call_forking(void) {
 	BC_ASSERT_GREATER(linphone_core_manager_get_mean_audio_down_bw(marie2), 60, int, "%d");
 	BC_ASSERT_LOWER(linphone_core_manager_get_mean_audio_down_bw(marie2), 99, int, "%d");
 
-	linphone_core_accept_call(marie->lc,linphone_core_get_current_call(marie->lc));
+	linphone_call_accept(linphone_core_get_current_call(marie->lc));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallStreamsRunning,1,3000));
 	BC_ASSERT_TRUE(wait_for_list(lcs,&pauline->stat.number_of_LinphoneCallStreamsRunning,1,3000));
 
@@ -628,7 +628,7 @@ static void call_with_sips(void){
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline1->stat.number_of_LinphoneCallIncomingReceived,1,1000));
 
 		/*pauline accepts the call */
-		linphone_core_accept_call(pauline1->lc,linphone_core_get_current_call(pauline1->lc));
+		linphone_call_accept(linphone_core_get_current_call(pauline1->lc));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline1->stat.number_of_LinphoneCallConnected,1,1000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline1->stat.number_of_LinphoneCallStreamsRunning,1,1000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallConnected,1,1000));
@@ -637,7 +637,7 @@ static void call_with_sips(void){
 		/*pauline2 should not have ring*/
 		BC_ASSERT_EQUAL(pauline2->stat.number_of_LinphoneCallIncomingReceived, 0, int, "%d");
 
-		linphone_core_terminate_call(pauline1->lc,linphone_core_get_current_call(pauline1->lc));
+		linphone_call_terminate(linphone_core_get_current_call(pauline1->lc));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&pauline1->stat.number_of_LinphoneCallEnd,1,3000));
 		BC_ASSERT_TRUE(wait_for_list(lcs,&marie->stat.number_of_LinphoneCallEnd,1,3000));
 
@@ -1246,13 +1246,14 @@ static void tls_authentication_requested_bad(LinphoneCore *lc, LinphoneAuthInfo 
 
 static void tls_client_auth_try_register(const char *identity, bool_t with_good_cert, bool_t must_work){
 	LinphoneCoreManager *lcm;
-	LinphoneCoreVTable* vtable = linphone_core_v_table_new();
+	LinphoneCoreCbs *cbs = linphone_factory_create_core_cbs(linphone_factory_get());
 	LinphoneProxyConfig *cfg;
 
 	lcm = linphone_core_manager_new(NULL);
 
-	vtable->authentication_requested= with_good_cert ? tls_authentication_requested_good : tls_authentication_requested_bad;
-	linphone_core_add_listener(lcm->lc,vtable);
+	linphone_core_cbs_set_authentication_requested(cbs, with_good_cert ? tls_authentication_requested_good : tls_authentication_requested_bad);
+	linphone_core_add_callbacks(lcm->lc, cbs);
+	linphone_core_cbs_unref(cbs);
 	cfg = linphone_core_create_proxy_config(lcm->lc);
 	
 	linphone_proxy_config_set_server_addr(cfg, "sip:sip2.linphone.org:5063;transport=tls");
@@ -1274,7 +1275,6 @@ static void tls_client_auth_try_register(const char *identity, bool_t with_good_
 	
 	linphone_proxy_config_unref(cfg);
 	linphone_core_manager_destroy(lcm);
-	linphone_core_v_table_destroy(vtable);
 }
 
 void tls_client_auth_bad_certificate_cn(void) {

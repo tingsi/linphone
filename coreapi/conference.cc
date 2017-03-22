@@ -94,7 +94,7 @@ public:
 		friend class Conference;
 	};
 	
-	Conference(LinphoneCore *core, const Params *params = NULL);
+	Conference(LinphoneCore *core, LinphoneConference *conf, const Params *params = NULL);
 	virtual ~Conference() {};
 	
 	const Params &getCurrentParams() const {return m_currentParams;}
@@ -138,11 +138,12 @@ protected:
 	std::list<Participant *> m_participants;
 	Params m_currentParams;
 	LinphoneConferenceState m_state;
+	LinphoneConference *m_conference;
 };
 
 class LocalConference: public Conference {
 public:
-	LocalConference(LinphoneCore *core, const Params *params = NULL);
+	LocalConference(LinphoneCore *core, LinphoneConference *conf, const Params *params = NULL);
 	virtual ~LocalConference();
 	
 	virtual int addParticipant(LinphoneCall *call);
@@ -179,7 +180,7 @@ private:
 
 class RemoteConference: public Conference {
 public:
-	RemoteConference(LinphoneCore *core, const Params *params = NULL);
+	RemoteConference(LinphoneCore *core, LinphoneConference *conf, const Params *params = NULL);
 	virtual ~RemoteConference();
 	
 	virtual int addParticipant(LinphoneCall *call);
@@ -221,19 +222,20 @@ using namespace Linphone;
 using namespace std;
 
 
-Conference::Conference(LinphoneCore *core, const Conference::Params *params):
+Conference::Conference(LinphoneCore *core, LinphoneConference *conf, const Conference::Params *params):
 	m_core(core),
 	m_localParticipantStream(NULL),
 	m_isMuted(false),
 	m_currentParams(),
-	m_state(LinphoneConferenceStopped) {
+	m_state(LinphoneConferenceStopped),
+	m_conference(conf) {
 	if(params) m_currentParams = *params;
 }
 
 int Conference::addParticipant(LinphoneCall *call) {
 	Participant *p =new Participant(call);
 	m_participants.push_back(p);
-	call->conf_ref = (LinphoneConference *)this;
+	call->conf_ref = m_conference;
 	return 0;
 }
 
@@ -302,7 +304,7 @@ void Conference::setState(LinphoneConferenceState state) {
 		ms_message("Switching conference [%p] into state '%s'", this, stateToString(state));
 		m_state = state;
 		if(m_currentParams.m_stateChangedCb) {
-			m_currentParams.m_stateChangedCb((LinphoneConference *)this, state, m_currentParams.m_userData);
+			m_currentParams.m_stateChangedCb(m_conference, state, m_currentParams.m_userData);
 		}
 	}
 }
@@ -324,8 +326,8 @@ Conference::Participant *Conference::findParticipant(const LinphoneAddress *uri)
 
 
 
-LocalConference::LocalConference(LinphoneCore *core, const Conference::Params *params):
-	Conference(core, params),
+LocalConference::LocalConference(LinphoneCore *core, LinphoneConference *conf, const Conference::Params *params):
+	Conference(core, conf, params),
 	m_conf(NULL),
 	m_localEndpoint(NULL),
 	m_recordEndpoint(NULL),
@@ -389,7 +391,7 @@ int LocalConference::addParticipant(LinphoneCall *call) {
 	if (call->state==LinphoneCallPaused){
 		call->params->in_conference=TRUE;
 		call->params->has_video=FALSE;
-		linphone_core_resume_call(m_core,call);
+		linphone_call_resume(call);
 	}else if (call->state==LinphoneCallStreamsRunning){
 		LinphoneCallParams *params=linphone_call_params_copy(linphone_call_get_current_params(call));
 		params->in_conference=TRUE;
@@ -404,7 +406,7 @@ int LocalConference::addParticipant(LinphoneCall *call) {
 		}
 		/*this will trigger a reINVITE that will later redraw the streams */
 		/*FIXME probably a bit too much to just redraw streams !*/
-		linphone_core_update_call(m_core,call,params);
+		linphone_call_update(call,params);
 		linphone_call_params_unref(params);
 		addLocalEndpoint();
 	}else{
@@ -441,11 +443,11 @@ int LocalConference::removeFromConference(LinphoneCall *call, bool_t active){
 			leave();
 		}
 		ms_message("Updating call to actually remove from conference");
-		err=linphone_core_update_call(m_core,call,params);
+		err=linphone_call_update(call,params);
 		linphone_call_params_unref(params);
 	} else{
 		ms_message("Pausing call to actually remove from conference");
-		err=_linphone_core_pause_call(m_core,call);
+		err=_linphone_call_pause(call);
 	}
 	return err;
 }
@@ -514,7 +516,7 @@ int LocalConference::terminate() {
 		LinphoneCall *call=(LinphoneCall*)calls->data;
 		calls=calls->next;
 		if (call->current_params->in_conference) {
-			linphone_core_terminate_call(m_core, call);
+			linphone_call_terminate(call);
 		}
 	}
 	
@@ -529,7 +531,7 @@ int LocalConference::enter() {
 		return -1;
 	}
 	if (m_core->current_call != NULL) {
-		_linphone_core_pause_call(m_core, m_core->current_call);
+		_linphone_call_pause(m_core->current_call);
 	}
 	if (m_localParticipantStream==NULL) addLocalEndpoint();
 	return 0;
@@ -622,7 +624,7 @@ void LocalConference::onCallTerminating(LinphoneCall *call) {
 
 
 
-RemoteConference::RemoteConference(LinphoneCore *core, const Conference::Params *params): Conference(core, params) {
+RemoteConference::RemoteConference(LinphoneCore *core, LinphoneConference *conf, const Conference::Params *params): Conference(core, conf, params) {
 	m_focusAddr = NULL;
 	m_focusContact = NULL;
 	m_focusCall = NULL;
@@ -725,7 +727,7 @@ int RemoteConference::terminate() {
 	switch(m_state) {
 		case LinphoneConferenceRunning:
 		case LinphoneConferenceStarting:
-			linphone_core_terminate_call(m_core, m_focusCall);
+			linphone_call_terminate(m_focusCall);
 			break;
 			
 		default: break;
@@ -742,7 +744,7 @@ int RemoteConference::enter() {
 	switch(callState) {
 		case LinphoneCallStreamsRunning: break;
 		case LinphoneCallPaused:
-			linphone_core_resume_call(m_core, m_focusCall);
+			linphone_call_resume(m_focusCall);
 			break;
 		default:
 			ms_error("Could not join the conference: bad focus call state (%s)", linphone_call_state_to_string(callState));
@@ -760,7 +762,7 @@ int RemoteConference::leave() {
 	switch(callState) {
 		case LinphoneCallPaused: break;
 		case LinphoneCallStreamsRunning:
-			linphone_core_pause_call(m_core, m_focusCall);
+			linphone_call_pause(m_focusCall);
 			break;
 		default:
 			ms_error("Could not leave the conference: bad focus call state (%s)", linphone_call_state_to_string(callState));
@@ -783,7 +785,7 @@ bool RemoteConference::focusIsReady() const {
 }
 
 bool RemoteConference::transferToFocus(LinphoneCall *call) {
-	if(linphone_core_transfer_call(m_core, call, m_focusContact) == 0) {
+	if(linphone_call_transfer(call, m_focusContact) == 0) {
 		m_transferingCalls.push_back(call);
 		return true;
 	} else {
@@ -847,7 +849,7 @@ void RemoteConference::onPendingCallStateChanged(LinphoneCall *call, LinphoneCal
 				if(m_state == LinphoneConferenceRunning) {
 					m_pendingCalls.remove(call);
 					m_transferingCalls.push_back(call);
-					linphone_core_transfer_call(m_core, call, m_focusContact);
+					linphone_call_transfer(call, m_focusContact);
 				}
 				break;
 				
@@ -912,106 +914,173 @@ const char *linphone_conference_state_to_string(LinphoneConferenceState state) {
 	return Conference::stateToString(state);
 }
 
+
+struct _LinphoneConferenceParams {
+	::belle_sip_object_t base;
+	Conference::Params *params;
+};
+
+static void _linphone_conference_params_uninit(LinphoneConferenceParams *params);
+static void _linphone_conference_params_clone(LinphoneConferenceParams *params, const LinphoneConferenceParams *orig);
+
+BELLE_SIP_DECLARE_NO_IMPLEMENTED_INTERFACES(LinphoneConferenceParams);
+BELLE_SIP_DECLARE_VPTR(LinphoneConferenceParams);
+BELLE_SIP_INSTANCIATE_VPTR(LinphoneConferenceParams, belle_sip_object_t,
+	_linphone_conference_params_uninit, // uninit
+	_linphone_conference_params_clone, // clone
+	NULL, // marshal
+	FALSE // unown
+);
+
 LinphoneConferenceParams *linphone_conference_params_new(const LinphoneCore *core) {
-	return (LinphoneConferenceParams *)new Conference::Params(core);
+	LinphoneConferenceParams *obj = belle_sip_object_new(LinphoneConferenceParams);
+	obj->params = new Conference::Params(core);
+	return obj;
+}
+
+static void _linphone_conference_params_uninit(LinphoneConferenceParams *params) {
+	delete params->params;
+}
+
+LinphoneConferenceParams *linphone_conference_params_ref(LinphoneConferenceParams *params) {
+	return (LinphoneConferenceParams *)belle_sip_object_ref(params);
+}
+
+void linphone_conference_params_unref(LinphoneConferenceParams *params) {
+	belle_sip_object_unref(params);
 }
 
 void linphone_conference_params_free(LinphoneConferenceParams *params) {
-	delete (Conference::Params *)params;
+	linphone_conference_params_unref(params);
+}
+
+static void _linphone_conference_params_clone(LinphoneConferenceParams *params, const LinphoneConferenceParams *orig) {
+	params->params = new Conference::Params(*orig->params);
 }
 
 LinphoneConferenceParams *linphone_conference_params_clone(const LinphoneConferenceParams *params) {
-	return (LinphoneConferenceParams *)new Conference::Params(*(Conference::Params *)params);
+	return (LinphoneConferenceParams *)belle_sip_object_clone((const belle_sip_object_t *)params);
 }
 
 void linphone_conference_params_enable_video(LinphoneConferenceParams *params, bool_t enable) {
-	((Conference::Params *)params)->enableVideo((enable == TRUE) ? true : false);
+	params->params->enableVideo(enable ? true : false);
 }
 
 bool_t linphone_conference_params_video_requested(const LinphoneConferenceParams *params) {
-	return ((Conference::Params *)params)->videoRequested();
+	return params->params->videoRequested() ? TRUE : FALSE;
 }
 
 void linphone_conference_params_set_state_changed_callback(LinphoneConferenceParams *params, LinphoneConferenceStateChangedCb cb, void *user_data) {
-	((Conference::Params *)params)->setStateChangedCallback(cb, user_data);
+	params->params->setStateChangedCallback(cb, user_data);
 }
 
 
+struct _LinphoneConference {
+	belle_sip_object_t base;
+	Conference *conf;
+};
+
+static void _linphone_conference_uninit(LinphoneConference *conf);
+
+BELLE_SIP_DECLARE_NO_IMPLEMENTED_INTERFACES(LinphoneConference);
+BELLE_SIP_DECLARE_VPTR(LinphoneConference);
+BELLE_SIP_INSTANCIATE_VPTR(LinphoneConference, belle_sip_object_t,
+	_linphone_conference_uninit, // uninit
+	NULL, // clone
+	NULL, // marshal
+	FALSE // unown
+);
 
 LinphoneConference *linphone_local_conference_new(LinphoneCore *core) {
-	return (LinphoneConference *) new LocalConference(core);
+	LinphoneConference *conf = belle_sip_object_new(LinphoneConference);
+	conf->conf = new LocalConference(core, conf);
+	return conf;
 }
 
 LinphoneConference *linphone_local_conference_new_with_params(LinphoneCore *core, const LinphoneConferenceParams *params) {
-	return (LinphoneConference *) new LocalConference(core, (Conference::Params *)params);
+	LinphoneConference *conf = belle_sip_object_new(LinphoneConference);
+	conf->conf = new LocalConference(core, conf, params->params);
+	return conf;
 }
 
 LinphoneConference *linphone_remote_conference_new(LinphoneCore *core) {
-	return (LinphoneConference *) new RemoteConference(core);
+	LinphoneConference *conf = belle_sip_object_new(LinphoneConference);
+	conf->conf = new RemoteConference(core, conf);
+	return conf;
 }
 
 LinphoneConference *linphone_remote_conference_new_with_params(LinphoneCore *core, const LinphoneConferenceParams *params) {
-	return (LinphoneConference *) new RemoteConference(core, (Conference::Params *)params);
+	LinphoneConference *conf = belle_sip_object_new(LinphoneConference);
+	conf->conf = new RemoteConference(core, conf, params->params);
+	return conf;
 }
 
-void linphone_conference_free(LinphoneConference *obj) {
-	delete (Conference *)obj;
+static void _linphone_conference_uninit(LinphoneConference *conf) {
+	delete conf->conf;
+}
+
+LinphoneConference *linphone_conference_ref(LinphoneConference *conf) {
+	return (LinphoneConference *)belle_sip_object_ref(conf);
+}
+
+void linphone_conference_unref(LinphoneConference *conf) {
+	belle_sip_object_unref(conf);
 }
 
 LinphoneConferenceState linphone_conference_get_state(const LinphoneConference *obj) {
-	return ((Conference *)obj)->getState();
+	return obj->conf->getState();
 }
 
 int linphone_conference_add_participant(LinphoneConference *obj, LinphoneCall *call) {
-	return ((Conference *)obj)->addParticipant(call);
+	return obj->conf->addParticipant(call);
 }
 
 int linphone_conference_remove_participant(LinphoneConference *obj, const LinphoneAddress *uri) {
-	return ((Conference *)obj)->removeParticipant(uri);
+	return obj->conf->removeParticipant(uri);
 }
 
 int linphone_conference_remove_participant_with_call(LinphoneConference *obj, LinphoneCall *call) {
-	return ((Conference *)obj)->removeParticipant(call);
+	return obj->conf->removeParticipant(call);
 }
 
 int linphone_conference_terminate(LinphoneConference *obj) {
-	return ((Conference *)obj)->terminate();
+	return obj->conf->terminate();
 }
 
 int linphone_conference_enter(LinphoneConference *obj) {
-	return ((Conference *)obj)->enter();
+	return obj->conf->enter();
 }
 
 int linphone_conference_leave(LinphoneConference *obj) {
-	return ((Conference *)obj)->leave();
+	return obj->conf->leave();
 }
 
 bool_t linphone_conference_is_in(const LinphoneConference *obj) {
-	return ((Conference *)obj)->isIn();
+	return obj->conf->isIn();
 }
 
 AudioStream *linphone_conference_get_audio_stream(const LinphoneConference *obj) {
-	return ((Conference *)obj)->getAudioStream();
+	return obj->conf->getAudioStream();
 }
 
 int linphone_conference_mute_microphone(LinphoneConference *obj, bool_t val) {
-	return ((Conference *)obj)->muteMicrophone((val == TRUE) ? true : false);
+	return obj->conf->muteMicrophone(val ? true : false);
 }
 
 bool_t linphone_conference_microphone_is_muted(const LinphoneConference *obj) {
-	return ((Conference *)obj)->microphoneIsMuted();
+	return obj->conf->microphoneIsMuted() ? TRUE : FALSE;
 }
 
 float linphone_conference_get_input_volume(const LinphoneConference *obj) {
-	return ((Conference *)obj)->getInputVolume();
+	return obj->conf->getInputVolume();
 }
 
 int linphone_conference_get_size(const LinphoneConference *obj) {
-	return ((Conference *)obj)->getSize();
+	return obj->conf->getSize();
 }
 
 bctbx_list_t *linphone_conference_get_participants(const LinphoneConference *obj) {
-	const list<Conference::Participant *> &participants = ((Conference *)obj)->getParticipants();
+	const list<Conference::Participant *> &participants = obj->conf->getParticipants();
 	bctbx_list_t *participants_list = NULL;
 	for(list<Conference::Participant *>::const_iterator it=participants.begin();it!=participants.end();it++) {
 		LinphoneAddress *uri = linphone_address_clone((*it)->getUri());
@@ -1021,29 +1090,29 @@ bctbx_list_t *linphone_conference_get_participants(const LinphoneConference *obj
 }
 
 int linphone_conference_start_recording(LinphoneConference *obj, const char *path) {
-	return ((Conference *)obj)->startRecording(path);
+	return obj->conf->startRecording(path);
 }
 
 int linphone_conference_stop_recording(LinphoneConference *obj) {
-	return ((Conference *)obj)->stopRecording();
+	return obj->conf->stopRecording();
 }
 
 void linphone_conference_on_call_stream_starting(LinphoneConference *obj, LinphoneCall *call, bool_t is_paused_by_remote) {
-	((Conference *)obj)->onCallStreamStarting(call, (is_paused_by_remote == TRUE) ? true : false);
+	obj->conf->onCallStreamStarting(call, is_paused_by_remote ? true : false);
 }
 
 void linphone_conference_on_call_stream_stopping(LinphoneConference *obj, LinphoneCall *call) {
-	((Conference *)obj)->onCallStreamStopping(call);
+	obj->conf->onCallStreamStopping(call);
 }
 
 void linphone_conference_on_call_terminating(LinphoneConference *obj, LinphoneCall *call) {
-	((Conference *)obj)->onCallTerminating(call);
+	obj->conf->onCallTerminating(call);
 }
 
 bool_t linphone_conference_check_class(LinphoneConference *obj, LinphoneConferenceClass _class) {
 	switch(_class) {
-		case LinphoneConferenceClassLocal: return typeid(obj) == typeid(LocalConference);
-		case LinphoneConferenceClassRemote: return typeid(obj) == typeid(RemoteConference);
+		case LinphoneConferenceClassLocal: return typeid(obj->conf) == typeid(LocalConference);
+		case LinphoneConferenceClassRemote: return typeid(obj->conf) == typeid(RemoteConference);
 		default: return FALSE;
 	}
 }

@@ -467,9 +467,13 @@ void linphone_gtk_cam_changed(GtkWidget *w){
 	LinphoneCall *call;
 	LinphoneCore *lc = linphone_gtk_get_core();
 	gchar *sel=gtk_combo_box_get_active_text(GTK_COMBO_BOX(w));
-	linphone_core_set_video_device(linphone_gtk_get_core(),sel);
-	if ((call = linphone_core_get_current_call(lc)) != NULL) {
-		linphone_core_update_call(lc, call, NULL);
+	if (sel){
+		if (strcmp(sel, linphone_core_get_video_device(lc)) != 0){
+			linphone_core_set_video_device(lc,sel);
+			if ((call = linphone_core_get_current_call(lc)) != NULL) {
+				linphone_call_update(call, NULL);
+			}
+		}
 	}
 	g_free(sel);
 }
@@ -1426,9 +1430,11 @@ void linphone_gtk_fill_soundcards(GtkWidget *pb){
 }
 
 void linphone_gtk_fill_webcams(GtkWidget *pb){
+#ifdef VIDEO_ENABLED
 	LinphoneCore *lc=linphone_gtk_get_core();
 	linphone_gtk_fill_combo_box(linphone_gtk_get_widget(pb,"webcams"),linphone_core_get_video_devices(lc),
 					linphone_core_get_video_device(lc),CAP_IGNORE);
+#endif
 }
 
 void linphone_gtk_fill_video_renderers(GtkWidget *pb){
@@ -1457,7 +1463,7 @@ void linphone_gtk_fill_video_renderers(GtkWidget *pb){
 		GtkTreeIter iter;
 
 		/* do not offer the user to select combo 'decoding/rendering' filter */
-		if (desc->enc_fmt != NULL)
+		if (desc->enc_fmt != NULL || (desc->flags & MS_FILTER_IS_ENABLED) == 0)
 			continue;
 
 		gtk_list_store_append(store,&iter);
@@ -1666,6 +1672,9 @@ void linphone_gtk_show_parameters(void){
 	if(!linphone_core_upnp_available()) {
 		gtk_widget_hide(linphone_gtk_get_widget(pb,"use_upnp"));
 	}
+	gtk_widget_hide(linphone_gtk_get_widget(pb, "use_nat_address"));
+	gtk_widget_hide(linphone_gtk_get_widget(pb, "nat_address"));
+	gtk_widget_hide(linphone_gtk_get_widget(pb, "nat_address_label"));
 
 	mtu=linphone_core_get_mtu(lc);
 	if (mtu<=0){
@@ -1687,6 +1696,9 @@ void linphone_gtk_show_parameters(void){
 	linphone_gtk_fill_video_sizes(linphone_gtk_get_widget(pb,"video_size"));
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(linphone_gtk_get_widget(pb,"video_framerate")),
 				linphone_core_get_preferred_framerate(lc));
+#ifndef VIDEO_ENABLED
+	gtk_widget_set_visible(linphone_gtk_get_widget(pb, "camera_preview_button"),FALSE);
+#endif
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(linphone_gtk_get_widget(pb,"echo_cancelation")),
 					linphone_core_echo_cancellation_enabled(lc));
 

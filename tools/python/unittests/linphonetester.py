@@ -47,7 +47,6 @@ def create_address(domain):
         domain = test_route
     addr.domain = domain
     assert_equals(addr.domain, domain)
-    addr.display_name = None
     addr.display_name = "Mr Tester"
     assert_equals(addr.display_name, "Mr Tester")
     return addr
@@ -217,6 +216,9 @@ class CoreManagerStats:
         self.number_of_LinphoneMessageInProgress = 0
         self.number_of_LinphoneMessageDelivered = 0
         self.number_of_LinphoneMessageNotDelivered = 0
+        self.number_of_LinphoneMessageFileTransferDone = 0
+        self.number_of_LinphoneMessageDeliveredToUser = 0
+        self.number_of_LinphoneMessageDisplayed = 0
         self.number_of_LinphoneIsComposingActiveReceived = 0
         self.number_of_LinphoneIsComposingIdleReceived = 0
         self.number_of_LinphoneFileTransferDownloadSuccessful = 0
@@ -345,7 +347,7 @@ class CoreManager:
 
         assert_equals(CoreManager.wait_for(callee_manager, caller_manager,
             lambda callee_manager, caller_manager: callee_manager.stats.number_of_LinphoneCallIncomingReceived == initial_callee_stats.number_of_LinphoneCallIncomingReceived + 1), True)
-        assert_equals(callee_manager.lc.incoming_invite_pending, True)
+        assert_equals(callee_manager.lc.is_incoming_invite_pending, True)
         assert_equals(caller_manager.stats.number_of_LinphoneCallOutgoingProgress, initial_caller_stats.number_of_LinphoneCallOutgoingProgress + 1)
 
         retry = 0
@@ -381,7 +383,7 @@ class CoreManager:
             lambda callee_manager, caller_manager: (callee_manager.stats.number_of_LinphoneCallStreamsRunning == initial_callee_stats.number_of_LinphoneCallStreamsRunning + 1) and \
                 (caller_manager.stats.number_of_LinphoneCallStreamsRunning == initial_caller_stats.number_of_LinphoneCallStreamsRunning + 1))
 
-        if caller_manager.lc.media_encryption != linphone.MediaEncryption.MediaEncryptionNone and callee_manager.lc.media_encryption != linphone.MediaEncryption.None:
+        if caller_manager.lc.media_encryption != linphone.MediaEncryption.MediaEncryptionNone and callee_manager.lc.media_encryption != linphone.MediaEncryption._None:
             # Wait for encryption to be on, in case of zrtp, it can take a few seconds
             if caller_manager.lc.media_encryption == linphone.MediaEncryption.ZRTP:
                 CoreManager.wait_for(callee_manager, caller_manager,
@@ -405,7 +407,7 @@ class CoreManager:
         manager = lc.user_data()
         linphonetester_logger.info("[TESTER] New registration state {state} for user id [{identity}] at proxy [{addr}]".format(
             state=linphone.RegistrationState.string(state), identity=cfg.identity_address.as_string(), addr=cfg.server_addr))
-        if state == linphone.RegistrationState.None:
+        if state == linphone.RegistrationState._None:
             manager.stats.number_of_LinphoneRegistrationNone += 1
         elif state == linphone.RegistrationState.Progress:
             manager.stats.number_of_LinphoneRegistrationProgress += 1

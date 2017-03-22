@@ -402,6 +402,20 @@ typedef enum _LinphoneConfiguringState {
 	LinphoneConfiguringSkipped
 } LinphoneConfiguringState;
 
+/**
+ * Consolidated presence information: 'online' means the user is open for communication,
+ * 'busy' means the user is open for communication but involved in an other activity,
+ * 'do not disturb' means the user is not open for communication, and 'offline' means
+ * that no presence information is available.
+ * @ingroup buddy_list
+ */
+typedef enum _LinphoneConsolidatedPresence {
+	LinphoneConsolidatedPresenceOnline,
+	LinphoneConsolidatedPresenceBusy,
+	LinphoneConsolidatedPresenceDoNotDisturb,
+	LinphoneConsolidatedPresenceOffline
+} LinphoneConsolidatedPresence;
+
 typedef struct _LinphoneContactProvider LinphoneContactProvider;
 
 typedef struct _LinphoneContactSearch LinphoneContactSearch;
@@ -579,6 +593,9 @@ typedef struct _LinphoneLDAPContactProvider LinphoneLDAPContactProvider;
 
 typedef struct _LinphoneLDAPContactSearch LinphoneLDAPContactSearch;
 
+/**
+ * @ingroup network_parameters
+ */
 typedef enum _LinphoneLimeState {
 	LinphoneLimeDisabled, /**< Lime is not used at all */
 	LinphoneLimeMandatory, /**< Lime is always used */
@@ -677,12 +694,6 @@ typedef struct _LinphonePresenceActivity LinphonePresenceActivity;
  * @ingroup buddy_list
  */
 typedef enum LinphonePresenceActivityType {
-	/** This value is not defined in the RFC, it corresponds to no activity with a basic status of "closed". */
-	LinphonePresenceActivityOffline,
-
-	/** This value is not defined in the RFC, it corresponds to no activity with a basic status of "open". */
-	LinphonePresenceActivityOnline,
-
 	/** The person has a calendar appointment, without specifying exactly of what type. This activity is
 	 *  indicated if more detailed information is not available or the person chooses not to reveal more
 	 * information. */

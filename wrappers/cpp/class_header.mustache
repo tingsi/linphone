@@ -35,22 +35,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "config.hh"
 {{/isfactory}}{{/_class}}
 
-#include "linphone/linphonecore.h"
-#include "linphone/linphone_tunnel.h"
-#include "linphone/linphonecore_utils.h"
-#include "linphone/wrapper_utils.h"
-
-#ifndef LINPHONECXX_PUBLIC
-#if defined(_MSC_VER)
-#ifdef LINPHONECXX_EXPORTS
-#define LINPHONECXX_PUBLIC	__declspec(dllexport)
-#else
-#define LINPHONECXX_PUBLIC	__declspec(dllimport)
-#endif
-#else
-#define LINPHONECXX_PUBLIC
-#endif
-#endif
 
 namespace linphone {
 
@@ -66,7 +50,7 @@ namespace linphone {
 	
 		public:
 			{{#isNotListener}}
-			{{{className}}}(::belle_sip_object_t *ptr, bool takeRef=true);
+			{{{className}}}(void *ptr, bool takeRef=true);
 			{{/isNotListener}}
 			
 			{{#ismonolistenable}}
@@ -74,14 +58,15 @@ namespace linphone {
 			{{/ismonolistenable}}
 
 			{{#ismultilistenable}}
-			LINPHONECXX_PUBLIC void addListener(std::shared_ptr<{{{listenerClassName}}}> &listener);
-			LINPHONECXX_PUBLIC void removeListener(std::shared_ptr<{{{listenerClassName}}}> &listener);
+			LINPHONECXX_PUBLIC virtual ~{{{className}}}();
+			LINPHONECXX_PUBLIC void addListener(const std::shared_ptr<{{{listenerClassName}}}> &listener);
+			LINPHONECXX_PUBLIC void removeListener(const std::shared_ptr<{{{listenerClassName}}}> &listener);
 			{{/ismultilistenable}}
 	
 		public:
 			{{#isfactory}}
-			LINPHONECXX_PUBLIC std::shared_ptr<Core> createCore(const std::shared_ptr<CoreListener> & cbs, const std::string & configPath, const std::string & factoryConfigPath) const;
-			LINPHONECXX_PUBLIC std::shared_ptr<Core> createCoreWithConfig(const std::shared_ptr<CoreListener> & cbs, const std::shared_ptr<Config> & config) const;
+			LINPHONECXX_PUBLIC std::shared_ptr<Core> createCore(const std::shared_ptr<CoreListener> &listener, const std::string & configPath, const std::string & factoryConfigPath) const;
+			LINPHONECXX_PUBLIC std::shared_ptr<Core> createCoreWithConfig(const std::shared_ptr<CoreListener> &listener, const std::shared_ptr<Config> & config) const;
 			{{/isfactory}}
 			{{#isVcard}}
 			LINPHONECXX_PUBLIC std::shared_ptr<belcard::BelCard> &getVcard();
@@ -95,18 +80,18 @@ namespace linphone {
 			{{{prototype}}}
 			
 			{{/staticMethods}}
+
+		{{#ismultilistenable}}
+		private:
+			static void *createCallbacks(void *userData);
+		{{/ismultilistenable}}
+		
 		
 		{{#ismultilistenable}}
 		private:
-			static {{{cListenerName}}} *createCallbacks(const std::shared_ptr<{{{listenerClassName}}}> &listener);
+			void *mCallbacks;
 		{{/ismultilistenable}}
-		
-		{{#islistenable}}
-		private:
-			{{#wrapperCbs}}
-			{{decl}}
-			{{/wrapperCbs}}
-		{{/islistenable}}
+			
 	};
 	{{/_class}}
 

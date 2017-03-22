@@ -144,7 +144,6 @@ static GOptionEntry linphone_options[]={
 	{0}
 };
 
-#define INSTALLED_XML_DIR PACKAGE_DATA_DIR "/linphone"
 #define RELATIVE_XML_DIR
 #define BUILD_TREE_XML_DIR "gtk"
 
@@ -258,6 +257,8 @@ static void linphone_gtk_init_liblinphone(const char *config_file,
 	LinphoneCoreVTable vtable={0};
 	gchar *secrets_file=linphone_gtk_get_config_file(SECRETS_FILE);
 	gchar *user_certificates_dir=linphone_gtk_get_config_file(CERTIFICATES_PATH);
+	MSFactory *msfactory = NULL;
+	MSFilterDesc *ogl_filter_desc;
 
 	vtable.global_state_changed=linphone_gtk_global_state_changed;
 	vtable.call_state_changed=linphone_gtk_call_state_changed;
@@ -302,6 +303,11 @@ static void linphone_gtk_init_liblinphone(const char *config_file,
 	if (chat_messages_db_file) linphone_core_set_chat_database_path(the_core,chat_messages_db_file);
 	if (call_logs_db_file) linphone_core_set_call_logs_database_path(the_core, call_logs_db_file);
 	if (friends_db_file) linphone_core_set_friends_database_path(the_core, friends_db_file);
+	
+	// Disable the generic OpenGL displaying filter
+	msfactory = linphone_core_get_ms_factory(the_core);
+	ogl_filter_desc = ms_factory_lookup_filter_by_id(msfactory, MS_OGL_ID);
+	if (ogl_filter_desc != NULL) ogl_filter_desc->flags &= ~MS_FILTER_IS_ENABLED;
 }
 
 LinphoneCore *linphone_gtk_get_core(void){
@@ -334,12 +340,14 @@ static void linphone_gtk_configure_window(GtkWidget *w, const char *window_name)
 static int get_ui_file(const char *name, char *path, int pathsize){
 	snprintf(path,pathsize,"%s/%s.ui",BUILD_TREE_XML_DIR,name);
 	if (bctbx_file_exist(path)!=0){
-		snprintf(path,pathsize,"%s/%s.ui",INSTALLED_XML_DIR,name);
+		LinphoneFactory *factory = linphone_factory_get();
+		char *data_dir = linphone_factory_get_data_resources_dir(factory);
+		snprintf(path,pathsize,"%s/%s.ui",data_dir,name);
 		if (bctbx_file_exist(path)!=0){
-			g_error("Could not locate neither %s/%s.ui nor %s/%s.ui",BUILD_TREE_XML_DIR,name,
-				INSTALLED_XML_DIR,name);
+			g_error("Could not locate neither %s/%s.ui nor %s/%s.ui",BUILD_TREE_XML_DIR,name,data_dir,name);
 			return -1;
 		}
+		bctbx_free(data_dir);
 	}
 	return 0;
 }
@@ -478,17 +486,22 @@ static void about_url_clicked(GtkAboutDialog *dialog, const char *url, gpointer 
 
 void linphone_gtk_show_about(void){
 	struct stat filestat;
-	const char *license_file=PACKAGE_DATA_DIR "/linphone/COPYING";
+	char *data_dir;
+	char *license_file;
 	GtkWidget *about;
 	const char *tmp;
 	GdkPixbuf *logo=create_pixbuf(
 		linphone_gtk_get_ui_config("logo","linphone-banner.png"));
 	static const char *defcfg="defcfg";
+	LinphoneFactory *factory = linphone_factory_get();
 
 	about=linphone_gtk_create_window("about", the_ui);
 
 	gtk_about_dialog_set_url_hook(about_url_clicked,NULL,NULL);
 
+	data_dir = linphone_factory_get_data_resources_dir(factory);
+	license_file = bctbx_strdup_printf("%s/COPYING", data_dir);
+	bctbx_free(data_dir);
 	memset(&filestat,0,sizeof(filestat));
 	if (stat(license_file,&filestat)!=0){
 		license_file="COPYING";
@@ -503,6 +516,7 @@ void linphone_gtk_show_about(void){
 		}
 		g_free(license);
 	}
+	bctbx_free(license_file);
 	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about),linphone_core_get_version());
 	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about),linphone_gtk_get_ui_config("title","Linphone"));
 	gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(about),linphone_gtk_get_ui_config("home","http://www.linphone.org"));
@@ -837,6 +851,7 @@ gchar *linphone_gtk_get_record_path(const LinphoneAddress *address, gboolean is_
 	const char **fmts=linphone_core_get_supported_file_formats(linphone_gtk_get_core());
 	int i;
 	const char *ext="wav";
+	char *record_path_utf8, *record_path;
 
 #ifdef _WIN32
 	loctime=*localtime(&curtime);
@@ -869,7 +884,10 @@ gchar *linphone_gtk_get_record_path(const LinphoneAddress *address, gboolean is_
 	if (!dir) {
 		ms_message ("No directory for music, using [%s] instead",dir=getenv("HOME"));
 	}
-	return g_build_filename(dir,filename,NULL);
+	record_path_utf8 = g_build_filename(dir,filename,NULL);
+	record_path = g_locale_from_utf8(record_path_utf8, -1, NULL, NULL, NULL);
+	g_free(record_path_utf8);
+	return record_path;
 }
 
 gchar *linphone_gtk_get_snapshot_path(void) {
@@ -879,6 +897,7 @@ gchar *linphone_gtk_get_snapshot_path(void) {
 	time_t curtime=time(NULL);
 	struct tm loctime;
 	const char *ext="jpg";
+	char *snapshot_path_utf8, *snapshot_path;
 
 #ifdef _WIN32
 	loctime=*localtime(&curtime);
@@ -892,7 +911,10 @@ gchar *linphone_gtk_get_snapshot_path(void) {
 	if (!dir) {
 		ms_message ("No directory for pictures, using [%s] instead",dir=getenv("HOME"));
 	}
-	return g_build_filename(dir,filename,NULL);
+	snapshot_path_utf8 = g_build_filename(dir,filename,NULL);
+	snapshot_path = g_locale_from_utf8(snapshot_path_utf8, -1, NULL, NULL, NULL);
+	g_free(snapshot_path_utf8);
+	return snapshot_path;
 }
 
 static gboolean linphone_gtk_start_call_do(GtkWidget *uri_bar){
@@ -920,7 +942,7 @@ static void accept_incoming_call(LinphoneCall *call){
 	LinphoneCallParams *params = linphone_core_create_call_params(lc, call);
 	gchar *record_file=linphone_gtk_get_record_path(linphone_call_get_remote_address(call),FALSE);
 	linphone_call_params_set_record_file(params,record_file);
-	linphone_core_accept_call_with_params(lc,call,params);
+	linphone_call_accept_with_params(call,params);
 	linphone_call_params_unref(params);
 }
 
@@ -970,7 +992,7 @@ void linphone_gtk_terminate_call(GtkWidget *button){
 	gboolean is_conf;
 	LinphoneCall *call=linphone_gtk_get_currently_displayed_call(&is_conf);
 	if (call){
-		linphone_core_terminate_call(linphone_gtk_get_core(),call);
+		linphone_call_terminate(call);
 	}else if (is_conf){
 		linphone_core_terminate_conference(linphone_gtk_get_core());
 	}
@@ -979,7 +1001,7 @@ void linphone_gtk_terminate_call(GtkWidget *button){
 void linphone_gtk_decline_clicked(GtkWidget *button){
 	LinphoneCall *call=linphone_gtk_get_currently_displayed_call(NULL);
 	if (call)
-		linphone_core_terminate_call(linphone_gtk_get_core(),call);
+		linphone_call_terminate(call);
 }
 
 void linphone_gtk_answer_clicked(GtkWidget *button){
@@ -1311,7 +1333,7 @@ static void on_call_updated_response(GtkWidget *dialog, gint responseid, gpointe
 		LinphoneCore *lc=linphone_call_get_core(call);
 		LinphoneCallParams *params = linphone_core_create_call_params(lc, call);
 		linphone_call_params_enable_video(params,responseid==GTK_RESPONSE_YES);
-		linphone_core_accept_call_update(lc,call,params);
+		linphone_call_accept_update(call,params);
 		linphone_call_params_unref(params);
 	}
 	g_source_remove_by_user_data(dialog);
@@ -1332,7 +1354,7 @@ static void linphone_gtk_call_updated_by_remote(LinphoneCall *call){
 	g_message("Video used=%i, video requested=%i, automatically_accept=%i",
 			  video_used,video_requested,pol->automatically_accept);
 	if (!video_used && video_requested && !pol->automatically_accept){
-		linphone_core_defer_call_update(lc,call);
+		linphone_call_defer_update(call);
 		{
 			const LinphoneAddress *addr=linphone_call_get_remote_address(call);
 			GtkWidget *dialog;
@@ -1353,6 +1375,8 @@ static void linphone_gtk_call_updated_by_remote(LinphoneCall *call){
 }
 
 static void linphone_gtk_call_state_changed(LinphoneCore *lc, LinphoneCall *call, LinphoneCallState cs, const char *msg){
+	const LinphoneErrorInfo *ei;
+
 	switch(cs){
 		case LinphoneCallOutgoingInit:
 			linphone_gtk_create_in_call_view (call);
@@ -1370,7 +1394,12 @@ static void linphone_gtk_call_state_changed(LinphoneCore *lc, LinphoneCall *call
 			linphone_gtk_in_call_view_terminate (call,msg);
 		break;
 		case LinphoneCallEnd:
-			linphone_gtk_in_call_view_terminate(call,NULL);
+			ei = linphone_call_get_error_info(call);
+			if (ei && linphone_error_info_get_reason(ei) != LinphoneReasonNone) {
+				linphone_gtk_in_call_view_terminate(call, linphone_error_info_get_phrase(ei));
+			} else {
+				linphone_gtk_in_call_view_terminate(call, NULL);
+			}
 			linphone_gtk_status_icon_set_blinking(FALSE);
 		break;
 		case LinphoneCallIncomingReceived:
@@ -1875,11 +1904,13 @@ void linphone_gtk_import_contacts(void) {
 
 	if (gtk_dialog_run(GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
 		LinphoneCore *lc = linphone_gtk_get_core();
-		char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+		char *filename_utf8 = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+		char *filename = g_locale_from_utf8(filename_utf8, -1, NULL, NULL, NULL);
 		LinphoneFriendList *list = linphone_core_get_default_friend_list(lc);
 		linphone_friend_list_import_friends_from_vcard4_file(list, filename);
-		g_free(filename);
 		linphone_gtk_show_friends();
+		g_free(filename_utf8);
+		g_free(filename);
 	}
 	gtk_widget_destroy(dialog);
 }
@@ -1891,9 +1922,11 @@ void linphone_gtk_export_contacts(void) {
 
 	if (gtk_dialog_run(GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
 		LinphoneCore *lc = linphone_gtk_get_core();
-		char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+		char *filename_utf8 = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+		char *filename = g_locale_from_utf8(filename_utf8, -1, NULL, NULL, NULL);
 		LinphoneFriendList *list = linphone_core_get_default_friend_list(lc);
 		linphone_friend_list_export_friends_as_vcard4_file(list, filename);
+		g_free(filename_utf8);
 		g_free(filename);
 	}
 	gtk_widget_destroy(dialog);
@@ -2103,6 +2136,8 @@ static void populate_xdg_data_dirs_envvar(void) {
 	int i;
 	gchar *value;
 	gchar **paths;
+	char *data_dir;
+	LinphoneFactory *factory = linphone_factory_get();
 
 	if(g_getenv("XDG_DATA_DIRS") == NULL) {
 		value = g_strdup("/usr/share:/usr/local/share:/opt/local/share");
@@ -2110,12 +2145,14 @@ static void populate_xdg_data_dirs_envvar(void) {
 		value = g_strdup(g_getenv("XDG_DATA_DIRS"));
 	}
 	paths = g_strsplit(value, ":", -1);
-	for(i=0; paths[i] && strcmp(paths[i], PACKAGE_DATA_DIR) != 0; i++);
+	data_dir = linphone_factory_get_top_resources_dir(factory);
+	for(i=0; paths[i] && strcmp(paths[i], data_dir) != 0; i++);
 	if(paths[i] == NULL) {
-		gchar *new_value = g_strdup_printf("%s:%s", PACKAGE_DATA_DIR, value);
+		gchar *new_value = g_strdup_printf("%s:%s", data_dir, value);
 		g_setenv("XDG_DATA_DIRS", new_value, TRUE);
 		g_free(new_value);
 	}
+	bctbx_free(data_dir);
 	g_strfreev(paths);
 #endif
 }
@@ -2127,10 +2164,13 @@ int main(int argc, char *argv[]){
 	GtkSettings *settings;
 	const char *icon_name=LINPHONE_ICON_NAME;
 	const char *app_name="Linphone";
-	LpConfig *factory;
+	LpConfig *factory_config;
 	char *chat_messages_db_file, *call_logs_db_file, *friends_db_file;
 	GError *error=NULL;
 	const char *tmp;
+	char *resources_dir;
+	char *pixmaps_dir;
+	LinphoneFactory *factory;
 
 #if !GLIB_CHECK_VERSION(2, 31, 0)
 	g_thread_init(NULL);
@@ -2226,17 +2266,22 @@ int main(int argc, char *argv[]){
 	}
 #endif
 	add_pixmap_directory("pixmaps");
-	add_pixmap_directory(PACKAGE_DATA_DIR "/pixmaps/linphone");
+	factory = linphone_factory_get();
+	resources_dir = linphone_factory_get_top_resources_dir(factory);
+	pixmaps_dir = bctbx_strdup_printf("%s/pixmaps/linphone", resources_dir);
+	add_pixmap_directory(pixmaps_dir);
+	bctbx_free(pixmaps_dir);
+	bctbx_free(resources_dir);
 
 	/* Now, look for the factory configuration file, we do it this late
 		 since we want to have had time to change directory and to parse
 		 the options, in case we needed to access the working directory */
 	factory_config_file = linphone_gtk_get_factory_config_file();
 	if (factory_config_file){
-		factory=lp_config_new(NULL);
-		lp_config_read_file(factory,factory_config_file);
-		app_name=lp_config_get_string(factory,"GtkUi","title","Linphone");
-		icon_name=lp_config_get_string(factory,"GtkUi","icon_name",LINPHONE_ICON_NAME);
+		factory_config=lp_config_new(NULL);
+		lp_config_read_file(factory_config,factory_config_file);
+		app_name=lp_config_get_string(factory_config,"GtkUi","title","Linphone");
+		icon_name=lp_config_get_string(factory_config,"GtkUi","icon_name",LINPHONE_ICON_NAME);
 	}
 	g_set_application_name(app_name);
 	gtk_window_set_default_icon_name(icon_name);

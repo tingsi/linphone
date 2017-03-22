@@ -21,7 +21,7 @@
 ############################################################################
 
 cmake_minimum_required(VERSION 3.0)
-project(linphone VERSION 3.10.2 LANGUAGES C CXX)
+project(linphone VERSION 3.11.1 LANGUAGES C CXX)
 
 
 set(LINPHONE_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
@@ -54,34 +54,25 @@ option(ENABLE_TOOLS "Turn on or off compilation of tools." YES)
 option(ENABLE_TUNNEL "Turn on compilation of tunnel support." NO)
 option(ENABLE_TUTORIALS "Enable compilation of tutorials." YES)
 option(ENABLE_UNIT_TESTS "Enable compilation of unit tests." YES)
-option(ENABLE_UPNP "Build with uPnP support." YES)
 option(ENABLE_VIDEO "Build with video support." YES)
 cmake_dependent_option(ENABLE_ASSISTANT "Turn on assistant compiling." YES "ENABLE_GTK_UI" NO)
 option(ENABLE_DEBUG_LOGS "Turn on or off debug level logs." NO)
 option(ENABLE_NLS "Build with internationalisation support" YES)
 option(ENABLE_VCARD "Turn on compilation of vcard4 support." YES)
-option(CXX_WRAPPER "Build the C++ wrapper for Liblinphone." OFF)
+option(ENABLE_ROOTCA_DOWNLOAD "Download rootca.pem at build time." YES)
+option(ENABLE_CXX_WRAPPER "Build the C++ wrapper for Liblinphone." OFF)
 
 
-macro(apply_compile_flags SOURCE_FILES)
-	if(${SOURCE_FILES})
-		set(options "")
-		foreach(a ${ARGV})
-			if(STRICT_OPTIONS_${a})
-				string(REPLACE ";" " " options_${a} "${STRICT_OPTIONS_${a}}")
-				set(options "${options} ${options_${a}}")
-			endif()
-		endforeach()
-		if(options)
-			set_source_files_properties(${${SOURCE_FILES}} PROPERTIES COMPILE_FLAGS "${options}")
-		endif()
-	endif()
-endmacro()
+set(CMAKE_CXX_STANDARD 11)
+
 
 if(ENABLE_STATIC)
 	set(LINPHONE_LIBS_FOR_TOOLS linphone-static)
 else()
 	set(LINPHONE_LIBS_FOR_TOOLS linphone)
+endif()
+if(WIN32 AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
+	list(APPEND LINPHONE_LIBS_FOR_TOOLS "Ws2_32")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -120,11 +111,13 @@ endif()
 if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
 	include("${EP_bellesip_CONFIG_DIR}/BelleSIPConfig.cmake")
 	include("${EP_ms2_CONFIG_DIR}/Mediastreamer2Config.cmake")
+	include("${EP_ortp_CONFIG_DIR}/ORTPConfig.cmake")
 	set(BcToolbox_FIND_COMPONENTS tester)
 	include("${EP_bctoolbox_CONFIG_DIR}/BcToolboxConfig.cmake")
 else()
 	find_package(BelleSIP REQUIRED)
 	find_package(Mediastreamer2 REQUIRED)
+	find_package(ORTP REQUIRED)
 	find_package(BcToolbox 0.0.3 REQUIRED OPTIONAL_COMPONENTS tester)
 endif()
 find_package(XML2 REQUIRED)
@@ -181,7 +174,7 @@ endif()
 if(ENABLE_LIME)
 	set(HAVE_LIME 1)
 endif()
-if (CXX_WRAPPER)
+if(ENABLE_CXX_WRAPPER)
 	set(Python_ADDITIONAL_VERSIONS 2)
 	find_package(PythonInterp REQUIRED)
 endif()
@@ -203,6 +196,8 @@ include_directories(
 	coreapi/
 	${CMAKE_CURRENT_BINARY_DIR}
 	${CMAKE_CURRENT_BINARY_DIR}/coreapi/
+)
+set(LINPHONE_INCLUDE_DIRS
 	${BELLESIP_INCLUDE_DIRS}
 	${MEDIASTREAMER2_INCLUDE_DIRS}
 	${BCTOOLBOX_CORE_INCLUDE_DIRS}
@@ -211,43 +206,44 @@ if(ANDROID)
 	include_directories(${CMAKE_CURRENT_BINARY_DIR}/java)
 endif()
 if(ENABLE_TUNNEL)
-	include_directories(${TUNNEL_INCLUDE_DIRS})
+	list(APPEND LINPHONE_INCLUDE_DIRS ${TUNNEL_INCLUDE_DIRS})
 endif()
 if (ENABLE_VCARD)
-	include_directories(${BELCARD_INCLUDE_DIRS})
+	list(APPEND LINPHONE_INCLUDE_DIRS ${BELCARD_INCLUDE_DIRS})
 endif()
 
-include_directories(${XML2_INCLUDE_DIRS})
+list(APPEND LINPHONE_INCLUDE_DIRS ${XML2_INCLUDE_DIRS})
 
 if(ZLIB_FOUND)
-	include_directories(${ZLIB_INCLUDE_DIRS})
+	list(APPEND LINPHONE_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS})
 	set(HAVE_ZLIB 1)
 endif()
 if(SQLITE3_FOUND)
-	include_directories(${SQLITE3_INCLUDE_DIRS})
+	list(APPEND LINPHONE_INCLUDE_DIRS ${SQLITE3_INCLUDE_DIRS})
 	if(ENABLE_SQLITE_STORAGE)
 		add_definitions("-DSQLITE_STORAGE_ENABLED")
 	endif()
 endif()
 if(INTL_FOUND)
 	set(HAVE_INTL 1)
-	include_directories(${INTL_INCLUDE_DIRS})
+	list(APPEND LINPHONE_INCLUDE_DIRS ${INTL_INCLUDE_DIRS})
 endif()
 if(MSVC)
 	include_directories(${MSVC_INCLUDE_DIR})
 endif()
 
 add_definitions("-DLINPHONE_EXPORTS")
-set(LINPHONE_CPPFLAGS ${MEDIASTREAMER2_CPPFLAGS})
+set(LINPHONE_CPPFLAGS ${BELCARD_CPPFLAGS} ${BELLESIP_CPPFLAGS} ${MEDIASTREAMER2_CPPFLAGS} ${BCTOOLBOX_CPPFLAGS})
 if(ENABLE_STATIC)
 	list(APPEND LINPHONE_CPPFLAGS "-DLINPHONE_STATIC")
+endif()
+if(LINPHONE_CPPFLAGS)
+	list(REMOVE_DUPLICATES LINPHONE_CPPFLAGS)
 	add_definitions(${LINPHONE_CPPFLAGS})
 endif()
+
 if(ENABLE_DEBUG_LOGS)
 	add_definitions("-DDEBUG")
-endif()
-if(ANDROID)
-	add_definitions("-DANDROID")
 endif()
 
 set(STRICT_OPTIONS_CPP )
@@ -338,7 +334,7 @@ endif()
 if(ENABLE_UNIT_TESTS AND BCTOOLBOX_TESTER_FOUND)
 	add_subdirectory(tester)
 endif()
-if(CXX_WRAPPER)
+if(ENABLE_CXX_WRAPPER)
 	add_subdirectory(wrappers/cpp)
 endif()
 
@@ -367,3 +363,18 @@ install(FILES
 	"${CMAKE_CURRENT_BINARY_DIR}/LinphoneConfigVersion.cmake"
 	DESTINATION ${CONFIG_PACKAGE_LOCATION}
 )
+
+
+# CPack settings
+set(CPACK_PACKAGE_NAME "linphone")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_SOURCE_GENERATOR "TGZ")
+set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
+set(CPACK_SOURCE_IGNORE_FILES
+        "^${CMAKE_BINARY_DIR}"
+        "/\\\\..+"
+	"^${CMAKE_SOURCE_DIR}/mediastreamer2"
+	"^${CMAKE_SOURCE_DIR}/oRTP"
+)
+
+include(CPack)

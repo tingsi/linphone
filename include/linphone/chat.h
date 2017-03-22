@@ -391,6 +391,35 @@ LINPHONE_PUBLIC const char * linphone_chat_message_get_content_type(const Linpho
 LINPHONE_PUBLIC void linphone_chat_message_set_content_type(LinphoneChatMessage *message, const char *content_type);
 
 /**
+ * Return whether or not a chat message is a file tranfer.
+ * @param[in] message LinphoneChatMessage object
+ * @return Whether or not the message is a file tranfer
+ */
+LINPHONE_PUBLIC bool_t linphone_chat_message_is_file_transfer(const LinphoneChatMessage *message);
+
+/**
+ * Return whether or not a chat message is a text.
+ * @param[in] message LinphoneChatMessage object
+ * @return Whether or not the message is a text
+ */
+LINPHONE_PUBLIC bool_t linphone_chat_message_is_text(const LinphoneChatMessage *message);
+
+/**
+ * Get if a chat message is to be stored.
+ * @param[in] message LinphoneChatMessage object
+ * @return Whether or not the message is to be stored
+ */
+LINPHONE_PUBLIC bool_t linphone_chat_message_get_to_be_stored(const LinphoneChatMessage *message);
+
+/**
+ * Set if a chat message is to be stored.
+ * This content type must match a content that is text representable, such as text/plain, text/html or image/svg+xml.
+ * @param[in] message LinphoneChatMessage object
+ * @param[in] to_be_stored Whether or not the chat message is to be stored
+ */
+LINPHONE_PUBLIC void linphone_chat_message_set_to_be_stored(LinphoneChatMessage *message, bool_t to_be_stored);
+
+/**
  * Start the download of the file from remote server
  *
  * @param message #LinphoneChatMessage
@@ -411,6 +440,12 @@ LINPHONE_PUBLIC int linphone_chat_message_download_file(LinphoneChatMessage *mes
  * @param msg	#LinphoneChatMessage
  */
 LINPHONE_PUBLIC void linphone_chat_message_cancel_file_transfer(LinphoneChatMessage* msg);
+
+/**
+ * Resend a chat message if it is in the 'not delivered' state for whatever reason.
+ * @param[in] msg LinphoneChatMessage object
+ */
+LINPHONE_PUBLIC void linphone_chat_message_resend(LinphoneChatMessage *msg);
 
 /**
  * Linphone message has an app-specific field that can store a text. The application might want

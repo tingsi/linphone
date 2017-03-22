@@ -23,8 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <memory>
 #include <list>
 #include <map>
-#include <belle-sip/object.h>
-#include <bctoolbox/list.h>
+#include <string>
 
 #ifndef LINPHONECXX_PUBLIC
 #if defined(_MSC_VER)
@@ -38,41 +37,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #endif
 #endif
 
+#ifndef LINPHONECXX_DEPRECATED
+#if defined(_MSC_VER)
+#define LINPHONECXX_DEPRECATED __declspec(deprecated)
+#else
+#define LINPHONECXX_DEPRECATED __attribute__ ((deprecated))
+#endif
+#endif
+
 namespace linphone {
-	
-	class Object;
-	class Listener;
-	
-	
-	class AbstractBctbxListWrapper {
-	public:
-		AbstractBctbxListWrapper(): mCList(NULL) {}
-		virtual ~AbstractBctbxListWrapper() {}
-		::bctbx_list_t *c_list() {return mCList;}
-		
-	protected:
-		::bctbx_list_t *mCList;
-	};
-	
-	
-	template <class T>
-	class ObjectBctbxListWrapper: public AbstractBctbxListWrapper {
-	public:
-		ObjectBctbxListWrapper(const std::list<std::shared_ptr<T> > &cppList);
-		virtual ~ObjectBctbxListWrapper();
-	};
-	
-	
-	class StringBctbxListWrapper: public AbstractBctbxListWrapper {
-	public:
-		StringBctbxListWrapper(const std::list<std::string> &cppList);
-		virtual ~StringBctbxListWrapper();
-	};
-	
 	
 	class Object: public std::enable_shared_from_this<Object> {
 	public:
-		Object(::belle_sip_object_t *ptr, bool takeRef=true);
+		Object(void *ptr, bool takeRef=true);
 		virtual ~Object();
 		
 	public:
@@ -96,11 +73,11 @@ namespace linphone {
 	
 	public:
 		template <class T>
-		static std::shared_ptr<T> cPtrToSharedPtr(::belle_sip_object_t *ptr, bool takeRef=true) {
+		static std::shared_ptr<T> cPtrToSharedPtr(void *ptr, bool takeRef=true) {
 			if (ptr == NULL) {
 				return nullptr;
 			} else {
-				T *cppPtr = (T *)belle_sip_object_data_get(ptr, "cpp_object");
+				Object *cppPtr = getBackPtrFromCPtr(ptr);
 				if (cppPtr == NULL) {
 					return std::make_shared<T>(ptr, takeRef);
 				} else {
@@ -108,64 +85,32 @@ namespace linphone {
 				}
 			}
 		}
-		static ::belle_sip_object_t *sharedPtrToCPtr(const std::shared_ptr<const Object> &sharedPtr);
-		
-	protected:
-		static std::string cStringToCpp(const char *cstr);
-		static std::string cStringToCpp(char *cstr);
-		static const char *cppStringToC(const std::string &cppstr);
-		
-		template <class T>
-		static std::list<std::shared_ptr<T> > bctbxObjectListToCppList(const ::bctbx_list_t *bctbxList) {
-			std::list<std::shared_ptr<T> > cppList;
-			for(const ::bctbx_list_t *it=bctbxList; it!=NULL; it=it->next) {
-				std::shared_ptr<T> newObj = Object::cPtrToSharedPtr<T>((::belle_sip_object_t *)it->data);
-				cppList.push_back(newObj);
-			}
-			return cppList;
-		}
-		
-		static std::list<std::string> bctbxStringListToCppList(const ::bctbx_list_t *bctbxList);
-		static std::list<std::string> cStringArrayToCppList(const char **cArray);
+		static void *sharedPtrToCPtr(const std::shared_ptr<const Object> &sharedPtr);
 	
 	private:
 		LINPHONECXX_PUBLIC std::map<std::string,void *> &getUserData() const;
+		static Object *getBackPtrFromCPtr(void *ptr);
 		template <class T> static void deleteSharedPtr(std::shared_ptr<T> *ptr) {if (ptr != NULL) delete ptr;}
 		static void deleteString(std::string *str) {if (str != NULL) delete str;}
 	
 	protected:
-		::belle_sip_object_t *mPrivPtr;
+		void *mPrivPtr;
 	
 	private:
 		static const std::string sUserDataKey;
 	};
 	
 	
-	class Listener {
-		public:
-			Listener(): mCbs(NULL) {}
-			virtual ~Listener() {setCallbacks(NULL);}
-		
-		public:
-			void setCallbacks(::belle_sip_object_t *cbs) {
-				if (mCbs != NULL) belle_sip_object_unref(mCbs);
-				if (cbs == NULL) mCbs = NULL;
-				else mCbs = belle_sip_object_ref(cbs);
-			}
-			belle_sip_object_t *getCallbacks() {return mCbs;}
-		
-		private:
-			::belle_sip_object_t *mCbs;
-	};
+	class Listener {};
 	
 	
 	class ListenableObject: public Object {
 	protected:
-		ListenableObject(::belle_sip_object_t *ptr, bool takeRef=true);
+		ListenableObject(void *ptr, bool takeRef=true);
 		void setListener(const std::shared_ptr<Listener> &listener);
 	
-	protected:
-		static std::shared_ptr<Listener> & getListenerFromObject(::belle_sip_object_t *object);
+	public:
+		static std::shared_ptr<Listener> & getListenerFromObject(void *object);
 	
 	private:
 		static void deleteListenerPtr(std::shared_ptr<Listener> *ptr) {delete ptr;}
@@ -178,12 +123,13 @@ namespace linphone {
 		friend class Factory;
 		
 	protected:
-		MultiListenableObject(::belle_sip_object_t *ptr, bool takeRef=true);
-		virtual ~MultiListenableObject();
+		MultiListenableObject(void *ptr, bool takeRef=true);
+		virtual ~MultiListenableObject() {};
 		
 	protected:
 		void addListener(const std::shared_ptr<Listener> &listener);
 		void removeListener(const std::shared_ptr<Listener> &listener);
+		std::list<std::shared_ptr<Listener> > &getListeners() const;
 	
 	private:
 		static void deleteListenerList(std::list<std::shared_ptr<Listener> > *listeners) {delete listeners;}

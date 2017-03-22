@@ -609,11 +609,32 @@ LINPHONE_PUBLIC void *linphone_core_cbs_get_user_data(const LinphoneCoreCbs *cbs
 LINPHONE_PUBLIC LinphoneCoreCbs *linphone_core_get_current_callbacks(const LinphoneCore *lc);
 
 /**
+ * Set the #LinphoneCoreGlobalStateChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @param[in] cb The callback.
+ */
+LINPHONE_PUBLIC void linphone_core_cbs_set_global_state_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsGlobalStateChangedCb cb);
+
+/**
+ * Get the # callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsGlobalStateChangedCb linphone_core_cbs_get_global_state_changed(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsRegistrationStateChangedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_registration_state_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsRegistrationStateChangedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsRegistrationStateChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsRegistrationStateChangedCb linphone_core_cbs_get_registration_state_changed(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsCallStateChangedCb callback.
@@ -623,11 +644,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_registration_state_changed(LinphoneCo
 LINPHONE_PUBLIC void linphone_core_cbs_set_call_state_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsCallStateChangedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsCallStateChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsCallStateChangedCb linphone_core_cbs_get_call_state_changed(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsNotifyPresenceReceivedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_notify_presence_received(LinphoneCoreCbs *cbs, LinphoneCoreCbsNotifyPresenceReceivedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsNotifyPresenceReceivedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsNotifyPresenceReceivedCb linphone_core_cbs_get_notify_presence_received(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsNotifyPresenceReceivedForUriOrTelCb callback.
@@ -637,11 +672,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_notify_presence_received(LinphoneCore
 LINPHONE_PUBLIC void linphone_core_cbs_set_notify_presence_received_for_uri_or_tel(LinphoneCoreCbs *cbs, LinphoneCoreCbsNotifyPresenceReceivedForUriOrTelCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsNotifyPresenceReceivedForUriOrTelCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsNotifyPresenceReceivedForUriOrTelCb linphone_core_cbs_get_notify_presence_received_for_uri_or_tel(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsNewSubscriptionRequestedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_new_subscription_requested(LinphoneCoreCbs *cbs, LinphoneCoreCbsNewSubscriptionRequestedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsNewSubscriptionRequestedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsNewSubscriptionRequestedCb linphone_core_cbs_get_new_subscription_requested(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsAuthenticationRequestedCb callback.'
@@ -651,11 +700,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_new_subscription_requested(LinphoneCo
 LINPHONE_PUBLIC void linphone_core_cbs_set_authentication_requested(LinphoneCoreCbs *cbs, LinphoneCoreCbsAuthenticationRequestedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsAuthenticationRequestedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsAuthenticationRequestedCb linphone_core_cbs_get_authentication_requested(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsCallLogUpdatedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_call_log_updated(LinphoneCoreCbs *cbs, LinphoneCoreCbsCallLogUpdatedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsCallLogUpdatedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsCallLogUpdatedCb linphone_core_cbs_get_call_log_updated(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsMessageReceivedCb callback.
@@ -665,11 +728,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_call_log_updated(LinphoneCoreCbs *cbs
 LINPHONE_PUBLIC void linphone_core_cbs_set_message_received(LinphoneCoreCbs *cbs, LinphoneCoreCbsMessageReceivedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsMessageReceivedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsMessageReceivedCb linphone_core_cbs_get_message_received(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsIsComposingReceivedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_is_composing_received(LinphoneCoreCbs *cbs, LinphoneCoreCbsIsComposingReceivedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsIsComposingReceivedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsIsComposingReceivedCb linphone_core_cbs_get_is_composing_received(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsDtmfReceivedCb callback.
@@ -679,11 +756,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_is_composing_received(LinphoneCoreCbs
 LINPHONE_PUBLIC void linphone_core_cbs_set_dtmf_received(LinphoneCoreCbs *cbs, LinphoneCoreCbsDtmfReceivedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsDtmfReceivedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsDtmfReceivedCb linphone_core_cbs_get_dtmf_received(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsReferReceivedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_refer_received(LinphoneCoreCbs *cbs, LinphoneCoreCbsReferReceivedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsReferReceivedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsReferReceivedCb linphone_core_cbs_get_refer_received(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsCallEncryptionChangedCb callback.
@@ -693,11 +784,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_refer_received(LinphoneCoreCbs *cbs, 
 LINPHONE_PUBLIC void linphone_core_cbs_set_call_encryption_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsCallEncryptionChangedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsCallEncryptionChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsCallEncryptionChangedCb linphone_core_cbs_get_call_encryption_changed(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsTransferStateChangedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_transfer_state_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsTransferStateChangedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsTransferStateChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsTransferStateChangedCb linphone_core_cbs_get_transfer_state_changed(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsBuddyInfoUpdatedCb callback.
@@ -707,11 +812,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_transfer_state_changed(LinphoneCoreCb
 LINPHONE_PUBLIC void linphone_core_cbs_set_buddy_info_updated(LinphoneCoreCbs *cbs, LinphoneCoreCbsBuddyInfoUpdatedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsBuddyInfoUpdatedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsBuddyInfoUpdatedCb linphone_core_cbs_get_buddy_info_updated(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsCallStatsUpdatedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_call_stats_updated(LinphoneCoreCbs *cbs, LinphoneCoreCbsCallStatsUpdatedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsCallStatsUpdatedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsCallStatsUpdatedCb linphone_core_cbs_get_call_stats_updated(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsInfoReceivedCb callback.
@@ -721,11 +840,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_call_stats_updated(LinphoneCoreCbs *c
 LINPHONE_PUBLIC void linphone_core_cbs_set_info_received(LinphoneCoreCbs *cbs, LinphoneCoreCbsInfoReceivedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsInfoReceivedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsInfoReceivedCb linphone_core_cbs_get_info_received(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsSubscriptionStateChangedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_subscription_state_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsSubscriptionStateChangedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsSubscriptionStateChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsSubscriptionStateChangedCb linphone_core_cbs_get_subscription_state_changed(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsNotifyReceivedCb callback.
@@ -735,11 +868,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_subscription_state_changed(LinphoneCo
 LINPHONE_PUBLIC void linphone_core_cbs_set_notify_received(LinphoneCoreCbs *cbs, LinphoneCoreCbsNotifyReceivedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsNotifyReceivedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsNotifyReceivedCb linphone_core_cbs_get_notify_received(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsPublishStateChangedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_publish_state_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsPublishStateChangedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsPublishStateChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsPublishStateChangedCb linphone_core_cbs_get_publish_state_changed(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsConfiguringStatusCb callback.
@@ -749,11 +896,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_publish_state_changed(LinphoneCoreCbs
 LINPHONE_PUBLIC void linphone_core_cbs_set_configuring_status(LinphoneCoreCbs *cbs, LinphoneCoreCbsConfiguringStatusCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsConfiguringStatusCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsConfiguringStatusCb linphone_core_cbs_get_configuring_status(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsNetworkReachableCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_network_reachable(LinphoneCoreCbs *cbs, LinphoneCoreCbsNetworkReachableCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsNetworkReachableCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsNetworkReachableCb linphone_core_cbs_get_network_reachable(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsLogCollectionUploadStateChangedCb callback.
@@ -763,11 +924,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_network_reachable(LinphoneCoreCbs *cb
 LINPHONE_PUBLIC void linphone_core_cbs_set_log_collection_upload_state_changed(LinphoneCoreCbs *cbs, LinphoneCoreCbsLogCollectionUploadStateChangedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsLogCollectionUploadStateChangedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsLogCollectionUploadStateChangedCb linphone_core_cbs_get_log_collection_upload_state_changed(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsLogCollectionUploadProgressIndicationCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_log_collection_upload_progress_indication(LinphoneCoreCbs *cbs, LinphoneCoreCbsLogCollectionUploadProgressIndicationCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsLogCollectionUploadProgressIndicationCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsLogCollectionUploadProgressIndicationCb linphone_core_cbs_get_log_collection_upload_progress_indication(LinphoneCoreCbs *cbs);
 
 /**
  * Set the #LinphoneCoreCbsFriendListCreatedCb callback.
@@ -777,11 +952,25 @@ LINPHONE_PUBLIC void linphone_core_cbs_set_log_collection_upload_progress_indica
 LINPHONE_PUBLIC void linphone_core_cbs_set_friend_list_created(LinphoneCoreCbs *cbs, LinphoneCoreCbsFriendListCreatedCb cb);
 
 /**
+ * Get the #LinphoneCoreCbsFriendListCreatedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsFriendListCreatedCb linphone_core_cbs_get_friend_list_created(LinphoneCoreCbs *cbs);
+
+/**
  * Set the #LinphoneCoreCbsFriendListRemovedCb callback.
  * @param[in] cbs A #LinphoneCoreCbs.
  * @param[in] cb The callback.
  */
 LINPHONE_PUBLIC void linphone_core_cbs_set_friend_list_removed(LinphoneCoreCbs *cbs, LinphoneCoreCbsFriendListRemovedCb cb);
+
+/**
+ * Get the #LinphoneCoreCbsFriendListRemovedCb callback.
+ * @param[in] cbs A #LinphoneCoreCbs.
+ * @return The callback.
+ */
+LINPHONE_PUBLIC LinphoneCoreCbsFriendListRemovedCb linphone_core_cbs_get_friend_list_removed(LinphoneCoreCbs *cbs);
 
 /**
  * @}
@@ -1147,8 +1336,9 @@ LINPHONE_PUBLIC LinphoneCall * linphone_core_invite_address_with_params(Linphone
  * @param[in] refer_to The destination the call is to be refered to
  * @return 0 on success, -1 on failure
  * @ingroup call_control
+ * @deprecated Use linphone_call_transfer() instead
 **/
-LINPHONE_PUBLIC int linphone_core_transfer_call(LinphoneCore *lc, LinphoneCall *call, const char *refer_to);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_transfer_call(LinphoneCore *lc, LinphoneCall *call, const char *refer_to);
 
 /**
  * Transfers a call to destination of another running call. This is used for "attended transfer" scenarios.
@@ -1165,8 +1355,9 @@ LINPHONE_PUBLIC int linphone_core_transfer_call(LinphoneCore *lc, LinphoneCall *
  * @param[in] dest A running call whose remote person will receive the transfer
  * @return 0 on success, -1 on failure
  * @ingroup call_control
+ * @deprecated Use linphone_call_transfer_to_another() instead
 **/
-LINPHONE_PUBLIC int linphone_core_transfer_call_to_another(LinphoneCore *lc, LinphoneCall *call, LinphoneCall *dest);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_transfer_call_to_another(LinphoneCore *lc, LinphoneCall *call, LinphoneCall *dest);
 
 /**
  * Start a new call as a consequence of a transfer request received from a call.
@@ -1218,8 +1409,9 @@ LINPHONE_PUBLIC LinphoneCall *linphone_core_get_current_call(const LinphoneCore 
  * @param[in] call The LinphoneCall object representing the call to be answered
  * @return 0 on success, -1 on failure
  * @ingroup call_control
+ * @deprecated Use linphone_call_accept() instead
 **/
-LINPHONE_PUBLIC int linphone_core_accept_call(LinphoneCore *lc, LinphoneCall *call);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_accept_call(LinphoneCore *lc, LinphoneCall *call);
 
 /**
  * Accept an incoming call, with parameters.
@@ -1234,8 +1426,9 @@ LINPHONE_PUBLIC int linphone_core_accept_call(LinphoneCore *lc, LinphoneCall *ca
  * @param[in] params The specific parameters for this call, for example whether video is accepted or not. Use NULL to use default parameters
  * @return 0 on success, -1 on failure
  * @ingroup call_control
+ * @deprecated Use linphone_call_accept_with_params() instead
 **/
-LINPHONE_PUBLIC int linphone_core_accept_call_with_params(LinphoneCore *lc, LinphoneCall *call, const LinphoneCallParams *params);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_accept_call_with_params(LinphoneCore *lc, LinphoneCall *call, const LinphoneCallParams *params);
 
 /**
  * When receiving an incoming, accept to start a media session as early-media.
@@ -1247,8 +1440,9 @@ LINPHONE_PUBLIC int linphone_core_accept_call_with_params(LinphoneCore *lc, Linp
  * @param[in] params The call parameters to use (can be NULL)
  * @return 0 if successful, -1 otherwise
  * @ingroup call_control
+ * @deprecated Use linphone_call_accept_early_media_with_params() instead
 **/
-LINPHONE_PUBLIC int linphone_core_accept_early_media_with_params(LinphoneCore* lc, LinphoneCall* call, const LinphoneCallParams* params);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_accept_early_media_with_params(LinphoneCore* lc, LinphoneCall* call, const LinphoneCallParams* params);
 
 /**
  * Accept an early media session for an incoming call.
@@ -1258,8 +1452,9 @@ LINPHONE_PUBLIC int linphone_core_accept_early_media_with_params(LinphoneCore* l
  * @return 0 if successful, -1 otherwise
  * @ingroup call_control
  * @see linphone_core_accept_early_media_with_params()
+ * @deprecated Use linphone_call_accept_early_media() instead
 **/
-LINPHONE_PUBLIC int linphone_core_accept_early_media(LinphoneCore* lc, LinphoneCall* call);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_accept_early_media(LinphoneCore* lc, LinphoneCall* call);
 
 /**
  * Terminates a call.
@@ -1267,8 +1462,9 @@ LINPHONE_PUBLIC int linphone_core_accept_early_media(LinphoneCore* lc, LinphoneC
  * @param[in] call The LinphoneCall object representing the call to be terminated
  * @return 0 on success, -1 on failure
  * @ingroup call_control
+ * @deprecated Use linphone_call_terminate() instead
 **/
-LINPHONE_PUBLIC int linphone_core_terminate_call(LinphoneCore *lc, LinphoneCall *call);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_terminate_call(LinphoneCore *lc, LinphoneCall *call);
 
 /**
  * Redirect the specified call to the given redirect URI.
@@ -1277,8 +1473,9 @@ LINPHONE_PUBLIC int linphone_core_terminate_call(LinphoneCore *lc, LinphoneCall 
  * @param[in] redirect_uri The URI to redirect the call to
  * @return 0 if successful, -1 on error.
  * @ingroup call_control
+ * @deprecated Use linphone_call_redirect() instead
  */
-LINPHONE_PUBLIC int linphone_core_redirect_call(LinphoneCore *lc, LinphoneCall *call, const char *redirect_uri);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_redirect_call(LinphoneCore *lc, LinphoneCall *call, const char *redirect_uri);
 
 /**
  * Decline a pending incoming call, with a reason.
@@ -1287,8 +1484,9 @@ LINPHONE_PUBLIC int linphone_core_redirect_call(LinphoneCore *lc, LinphoneCall *
  * @param[in] reason The reason for rejecting the call: LinphoneReasonDeclined or LinphoneReasonBusy
  * @return 0 on success, -1 on failure
  * @ingroup call_control
+ * @deprecated Use linphone_call_decline() instead
 **/
-LINPHONE_PUBLIC int linphone_core_decline_call(LinphoneCore *lc, LinphoneCall * call, LinphoneReason reason);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_decline_call(LinphoneCore *lc, LinphoneCall * call, LinphoneReason reason);
 
 /**
  * Terminates all the calls.
@@ -1307,8 +1505,9 @@ LINPHONE_PUBLIC int linphone_core_terminate_all_calls(LinphoneCore *lc);
  * @return 0 on success, -1 on failure
  * @ingroup call_control
  * @see linphone_core_resume_call()
+ * @deprecated Use linphone_call_pause() instead
 **/
-LINPHONE_PUBLIC int linphone_core_pause_call(LinphoneCore *lc, LinphoneCall *call);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_pause_call(LinphoneCore *lc, LinphoneCall *call);
 
 /**
  * Pause all currently running calls.
@@ -1326,8 +1525,9 @@ LINPHONE_PUBLIC int linphone_core_pause_all_calls(LinphoneCore *lc);
  * @return 0 on success, -1 on failure
  * @ingroup call_control
  * @see linphone_core_pause_call()
+ * @deprecated Use linphone_call_resume() instead
 **/
-LINPHONE_PUBLIC int linphone_core_resume_call(LinphoneCore *lc, LinphoneCall *call);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_resume_call(LinphoneCore *lc, LinphoneCall *call);
 
 /**
  * Updates a running call according to supplied call parameters or parameters changed in the LinphoneCore.
@@ -1337,13 +1537,15 @@ LINPHONE_PUBLIC int linphone_core_resume_call(LinphoneCore *lc, LinphoneCall *ca
  * In case no changes are requested through the LinphoneCallParams argument, then this argument can be omitted and set to NULL.
  * WARNING: Updating a call in the LinphoneCallPaused state will still result in a paused call even if the media directions set in the
  * params are sendrecv. To resume a paused call, you need to call linphone_core_resume_call().
+ *
  * @param[in] lc LinphoneCore object
  * @param[in] call The call to be updated
  * @param[in] params The new call parameters to use (may be NULL)
  * @return 0 if successful, -1 otherwise.
  * @ingroup call_control
+ * @deprecated Use linphone_call_update() instead
 **/
-LINPHONE_PUBLIC int linphone_core_update_call(LinphoneCore *lc, LinphoneCall *call, const LinphoneCallParams *params);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_update_call(LinphoneCore *lc, LinphoneCall *call, const LinphoneCallParams *params);
 
 /**
  * When receiving a #LinphoneCallUpdatedByRemote state notification, prevent LinphoneCore from performing an automatic answer.
@@ -1365,8 +1567,9 @@ LINPHONE_PUBLIC int linphone_core_update_call(LinphoneCore *lc, LinphoneCall *ca
  * @param[in] call The call for which to defer the update
  * @return 0 if successful, -1 if the linphone_core_defer_call_update() was done outside a valid #LinphoneCallUpdatedByRemote notification
  * @ingroup call_control
+ * @deprecated Use linphone_call_defer_update() instead
 **/
-LINPHONE_PUBLIC int linphone_core_defer_call_update(LinphoneCore *lc, LinphoneCall *call);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_defer_call_update(LinphoneCore *lc, LinphoneCall *call);
 
 /**
  * Accept call modifications initiated by other end.
@@ -1386,8 +1589,9 @@ LINPHONE_PUBLIC int linphone_core_defer_call_update(LinphoneCore *lc, LinphoneCa
  * @param[in] params A LinphoneCallParams object describing the call parameters to accept
  * @return 0 if successful, -1 otherwise (actually when this function call is performed outside ot #LinphoneCallUpdatedByRemote state)
  * @ingroup call_control
+ * @deprecated Use linphone_call_accept_update() instead
 **/
-LINPHONE_PUBLIC int linphone_core_accept_call_update(LinphoneCore *lc, LinphoneCall *call, const LinphoneCallParams *params);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_accept_call_update(LinphoneCore *lc, LinphoneCall *call, const LinphoneCallParams *params);
 
 /**
  * Create a LinphoneCallParams suitable for linphone_core_invite_with_params(), linphone_core_accept_call_with_params(), linphone_core_accept_early_media_with_params(),
@@ -1474,12 +1678,27 @@ LINPHONE_PUBLIC bool_t linphone_core_get_guess_hostname(LinphoneCore *lc);
 
 /**
  * Tells to LinphoneCore to use Linphone Instant Messaging encryption
- *
+ * @param[in] lc LinphoneCore object
+ * @param[in] val The new lime state
+ * @ingroup network_parameters
  */
 LINPHONE_PUBLIC void linphone_core_enable_lime(LinphoneCore *lc, LinphoneLimeState val);
 
+
+/**
+ * Returns the lime state
+ * @param[in] lc LinphoneCore object
+ * @return The current lime state
+ * @ingroup network_parameters
+**/
 LINPHONE_PUBLIC LinphoneLimeState linphone_core_lime_enabled(const LinphoneCore *lc);
 
+
+/**
+ * Tells if lime is available
+ * @param[in] lc LinphoneCore object
+ * @ingroup network_parameters
+**/
 LINPHONE_PUBLIC bool_t linphone_core_lime_available(const LinphoneCore *lc);
 
 /**
@@ -1733,6 +1952,16 @@ LINPHONE_PUBLIC int linphone_core_set_video_codecs(LinphoneCore *lc, bctbx_list_
 **/
 LINPHONE_PUBLIC const bctbx_list_t *linphone_core_get_text_codecs(const LinphoneCore *lc);
 
+/**
+ * Sets the list of text codecs.
+ * @param[in] lc The LinphoneCore object
+ * @param[in] codecs \bctbx_list{LinphonePayloadType}
+ * @return 0
+ *
+ * The list is taken by the LinphoneCore thus the application should not free it.
+ * This list is made of struct PayloadType describing the codec parameters.
+ * @ingroup media_parameters
+**/
 LINPHONE_PUBLIC int linphone_core_set_text_codecs(LinphoneCore *lc, bctbx_list_t *codecs);
 
 /**
@@ -1782,8 +2011,9 @@ LINPHONE_PUBLIC bool_t linphone_core_payload_type_enabled(LinphoneCore *lc, cons
  * @param[in] pt The #LinphonePayloadType we want to know
  * @return TRUE if the payload type represents a VBR codec, FALSE if disabled.
  * @ingroup media_parameters
+ * @deprecated Use linphone_payload_type_is_vbr() instead
  */
-LINPHONE_PUBLIC bool_t linphone_core_payload_type_is_vbr(LinphoneCore *lc, const LinphonePayloadType *pt);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED bool_t linphone_core_payload_type_is_vbr(LinphoneCore *lc, const LinphonePayloadType *pt);
 
 /**
  * Set an explicit bitrate (IP bitrate, not codec bitrate) for a given codec, in kbit/s.
@@ -1840,15 +2070,17 @@ LINPHONE_PUBLIC LinphonePayloadType* linphone_core_find_payload_type(LinphoneCor
 /**
  * Returns the payload type number assigned for this codec.
  * @ingroup media_parameters
+ * @deprecated Use linphone_payload_type_get_number() instead
 **/
-LINPHONE_PUBLIC int linphone_core_get_payload_type_number(LinphoneCore *lc, const PayloadType *pt);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_payload_type_number(LinphoneCore *lc, const PayloadType *pt);
 
 /**
  * Force a number for a payload type. The LinphoneCore does payload type number assignment automatically. THis function is to be used mainly for tests, in order
  * to override the automatic assignment mechanism.
  * @ingroup media_parameters
+ * @deprecated Use linphone_payload_type_set_number() instead
 **/
-LINPHONE_PUBLIC void linphone_core_set_payload_type_number(LinphoneCore *lc, PayloadType *pt, int number);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_payload_type_number(LinphoneCore *lc, PayloadType *pt, int number);
 
 LINPHONE_PUBLIC const char *linphone_core_get_payload_type_description(LinphoneCore *lc, PayloadType *pt);
 
@@ -3422,6 +3654,10 @@ LINPHONE_PUBLIC void linphone_core_stop_dtmf(LinphoneCore *lc);
 
 LINPHONE_PUBLIC int linphone_core_get_current_call_duration(const LinphoneCore *lc);
 
+/**
+ * Returns the maximum transmission unit size in bytes.
+ * @ingroup media_parameters
+**/
 LINPHONE_PUBLIC int linphone_core_get_mtu(const LinphoneCore *lc);
 
 /**
@@ -4591,6 +4827,20 @@ LINPHONE_PUBLIC LinphoneOnlineStatus linphone_core_get_presence_info(const Linph
  * @return A #LinphonePresenceModel object, or NULL if no presence model has been set.
  */
 LINPHONE_PUBLIC LinphonePresenceModel * linphone_core_get_presence_model(const LinphoneCore *lc);
+
+/**
+ * Get my consolidated presence
+ * @param[in] lc LinphoneCore object
+ * @return My consolidated presence
+ */
+LINPHONE_PUBLIC LinphoneConsolidatedPresence linphone_core_get_consolidated_presence(const LinphoneCore *lc);
+
+/**
+ * Set my consolidated presence
+ * @param[in] lc LinphoneCore object
+ * @param[in] presence LinphoneConsolidatedPresence value
+ */
+LINPHONE_PUBLIC void linphone_core_set_consolidated_presence(LinphoneCore *lc, LinphoneConsolidatedPresence presence);
 
 /**
  * @deprecated Use linphone_core_interpret_url() instead

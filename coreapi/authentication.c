@@ -30,7 +30,7 @@ static void _linphone_auth_info_uninit(LinphoneAuthInfo *obj);
 static void _linphone_auth_info_copy(LinphoneAuthInfo *dst, const LinphoneAuthInfo *src);
 
 BELLE_SIP_DECLARE_NO_IMPLEMENTED_INTERFACES(LinphoneAuthInfo);
-BELLE_SIP_DECLARE_VPTR(LinphoneAuthInfo);
+BELLE_SIP_DECLARE_VPTR_NO_EXPORT(LinphoneAuthInfo);
 BELLE_SIP_INSTANCIATE_VPTR(
 	LinphoneAuthInfo,
 	belle_sip_object_t,
@@ -427,7 +427,7 @@ void linphone_core_add_auth_info(LinphoneCore *lc, const LinphoneAuthInfo *info)
 	ai=(LinphoneAuthInfo*)linphone_core_find_auth_info(lc,info->realm,info->username,info->domain);
 	if (ai!=NULL && ai->domain && info->domain && strcmp(ai->domain, info->domain)==0){
 		lc->auth_info=bctbx_list_remove(lc->auth_info,ai);
-		linphone_auth_info_destroy(ai);
+		linphone_auth_info_unref(ai);
 		updating=TRUE;
 	}
 	lc->auth_info=bctbx_list_append(lc->auth_info,linphone_auth_info_clone(info));
@@ -487,7 +487,7 @@ void linphone_core_remove_auth_info(LinphoneCore *lc, const LinphoneAuthInfo *in
 	r=(LinphoneAuthInfo*)linphone_core_find_auth_info(lc,info->realm,info->username,info->domain);
 	if (r){
 		lc->auth_info=bctbx_list_remove(lc->auth_info,r);
-		linphone_auth_info_destroy(r);
+		linphone_auth_info_unref(r);
 		write_auth_infos(lc);
 	}
 }
@@ -501,7 +501,7 @@ void linphone_core_clear_all_auth_info(LinphoneCore *lc){
 	int i;
 	for(i=0,elem=lc->auth_info;elem!=NULL;elem=bctbx_list_next(elem),i++){
 		LinphoneAuthInfo *info=(LinphoneAuthInfo*)elem->data;
-		linphone_auth_info_destroy(info);
+		linphone_auth_info_unref(info);
 		linphone_auth_info_write_config(lc->config,NULL,i);
 	}
 	bctbx_list_free(lc->auth_info);

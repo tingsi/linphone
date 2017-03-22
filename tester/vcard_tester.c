@@ -268,12 +268,12 @@ static void friend_list_removed_cb(LinphoneCore *lc, LinphoneFriendList *list) {
 }
 
 static void friends_sqlite_storage(void) {
-	LinphoneCoreVTable *v_table = linphone_core_v_table_new();
 	LinphoneCore* lc = NULL;
+	LinphoneCoreCbs *cbs;
 	LinphoneFriendList *lfl = NULL;
 	LinphoneFriend *lf = NULL;
 	LinphoneFriend *lf2 = NULL;
-	LinphoneVcard *lvc = linphone_vcard_new();
+	LinphoneVcard *lvc = linphone_factory_create_vcard(linphone_factory_get());
 	LinphoneAddress *addr = linphone_address_new("sip:sylvain@sip.linphone.org");
 	const bctbx_list_t *friends = NULL;
 	bctbx_list_t *friends_from_db = NULL;
@@ -283,9 +283,11 @@ static void friends_sqlite_storage(void) {
 	const LinphoneAddress *laddress = NULL, *laddress2 = NULL;
 	char *address = NULL, *address2 = NULL;
 
-	v_table->friend_list_created = friend_list_created_cb;
-	v_table->friend_list_removed = friend_list_removed_cb;
-	lc = linphone_core_new(v_table, NULL, NULL, NULL);
+	cbs = linphone_factory_create_core_cbs(linphone_factory_get());
+	linphone_core_cbs_set_friend_list_created(cbs, friend_list_created_cb);
+	linphone_core_cbs_set_friend_list_removed(cbs, friend_list_removed_cb);
+	lc = linphone_factory_create_core(linphone_factory_get(), cbs, NULL, NULL);
+	linphone_core_cbs_unref(cbs);
 	friends = linphone_friend_list_get_friends(linphone_core_get_default_friend_list(lc));
 	lfl = linphone_core_create_friend_list(lc);
 	linphone_friend_list_set_user_data(lfl, stats);
@@ -369,11 +371,157 @@ static void friends_sqlite_storage(void) {
 end:
 	ms_free(stats);
 	linphone_address_unref(addr);
-	linphone_core_destroy(lc);
-	linphone_core_v_table_destroy(v_table);
+	linphone_core_unref(lc);
 	unlink(friends_db);
 	bc_free(friends_db);
 }
+
+static void friends_sqlite_store_lot_of_friends(void) {
+	LinphoneCore* lc = linphone_factory_create_core(linphone_factory_get(), NULL, NULL, NULL);
+	sqlite3 *db;
+	int i;
+	char* errmsg = NULL;
+	int ret;
+	char *buf;
+
+	ret = sqlite3_open(lc->friends_db_file, &db);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db,"BEGIN",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	
+	ret = sqlite3_exec(db,
+					   "CREATE TABLE IF NOT EXISTS friends ("
+					   "id                INTEGER PRIMARY KEY AUTOINCREMENT,"
+					   "friend_list_id    INTEGER,"
+					   "sip_uri           TEXT,"
+					   "subscribe_policy  INTEGER,"
+					   "send_subscribe    INTEGER,"
+					   "ref_key           TEXT,"
+					   "vCard             TEXT,"
+					   "vCard_etag        TEXT,"
+					   "vCard_url         TEXT,"
+					   "presence_received INTEGER"
+					   ");", 0, 0, &errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db,"END",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+
+	ms_message("Start :\n");
+	ret = sqlite3_exec(db,"BEGIN",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	for (i = 0; i < 20000; i++) {
+		buf = sqlite3_mprintf("INSERT INTO friends VALUES(NULL,%u,%Q,%i,%i,'key_%i',%Q,%Q,%Q,%i);",
+							  i,
+							  "dummy_addr",
+							  0,
+							  0,
+							  i,
+							  NULL,
+							  NULL,
+							  NULL,
+							  0
+							  );
+
+		ret = sqlite3_exec(db,buf,0,0,&errmsg);
+		BC_ASSERT_TRUE(ret ==SQLITE_OK);
+		sqlite3_free(buf);
+	}
+	
+	ret = sqlite3_exec(db,"END",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	
+	ms_message("End :\n");
+	
+	ret = sqlite3_exec(db,"BEGIN",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db, "DELETE FROM friends;",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db,"END",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	sqlite3_close(db);
+	linphone_core_unref(lc);
+}
+
+static void friends_sqlite_find_friend_in_lot_of_friends(void) {
+	LinphoneCore* lc = linphone_factory_create_core(linphone_factory_get(), NULL, NULL, NULL);
+	sqlite3 *db;
+	int i;
+	char* errmsg = NULL;
+	int ret;
+	char *buf;
+	bctoolboxTimeSpec t1;
+	bctoolboxTimeSpec t2;
+
+	ret = sqlite3_open(lc->friends_db_file, &db);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db,"BEGIN",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	
+	ret = sqlite3_exec(db,
+					   "CREATE TABLE IF NOT EXISTS friends ("
+					   "id                INTEGER PRIMARY KEY AUTOINCREMENT,"
+					   "friend_list_id    INTEGER,"
+					   "sip_uri           TEXT,"
+					   "subscribe_policy  INTEGER,"
+					   "send_subscribe    INTEGER,"
+					   "ref_key           TEXT,"
+					   "vCard             TEXT,"
+					   "vCard_etag        TEXT,"
+					   "vCard_url         TEXT,"
+					   "presence_received INTEGER"
+					   ");", 0, 0, &errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db,"END",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	
+	ret = sqlite3_exec(db,"BEGIN",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	for (i = 0; i < 20000; i++) {
+		buf = sqlite3_mprintf("INSERT INTO friends VALUES(NULL,%u,%Q,%i,%i,'key_%i',%Q,%Q,%Q,%i);",
+							  i,
+							  "dummy_addr",
+							  0,
+							  0,
+							  i,
+							  NULL,
+							  NULL,
+							  NULL,
+							  0
+							  );
+		
+		ret = sqlite3_exec(db,buf,0,0,&errmsg);
+		BC_ASSERT_TRUE(ret ==SQLITE_OK);
+		sqlite3_free(buf);
+		//ms_message("%i",i);
+	}
+	
+	ret = sqlite3_exec(db,"END",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	
+	bctbx_get_cur_time(&t1);
+	ms_message("Start : %li : %li\n", (long int)t1.tv_sec, (long int)t1.tv_nsec);
+	for (i = 0; i < 20000; i++) {
+		buf = sqlite3_mprintf("SELECT * FROM friends WHERE ref_key LIKE 'key_%i';",
+							  i);
+		
+		ret = sqlite3_exec(db,buf,0,0,&errmsg);
+		BC_ASSERT_TRUE(ret ==SQLITE_OK);
+		sqlite3_free(buf);
+	}
+	
+	bctbx_get_cur_time(&t2);
+	ms_message("End : %li : %li\n", (long int)t2.tv_sec, (long int)t2.tv_nsec);
+	
+	ret = sqlite3_exec(db,"BEGIN",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db, "DELETE FROM friends;",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	ret = sqlite3_exec(db,"END",0,0,&errmsg);
+	BC_ASSERT_TRUE(ret ==SQLITE_OK);
+	sqlite3_close(db);
+	linphone_core_unref(lc);
+}
+
 #endif
 
 typedef struct _LinphoneCardDAVStats {
@@ -812,6 +960,51 @@ end:
 	linphone_friend_unref(lf);
 	linphone_core_manager_destroy(manager);
 }
+
+static void insert_lot_of_friends_map_test(void) {
+	int i;
+	bctbx_map_t *friends_map = bctbx_mmap_cchar_new();
+	bctbx_pair_cchar_t *pair;
+	
+	char key[64];
+	ms_message("Start\n");
+	for(i = 0; i < 20000; i++) {
+		snprintf(key, sizeof(key),"key_%i",i);
+		pair = bctbx_pair_cchar_new(key,(void*)(uintptr_t)i);
+		bctbx_map_cchar_insert_and_delete(friends_map, (bctbx_pair_t*)pair);
+	}
+	ms_message("End\n");
+	bctbx_mmap_cchar_delete(friends_map);
+}
+
+static void find_friend_by_ref_key_in_lot_of_friends_test(void) {
+	int i;
+	int j;
+	bctbx_map_t *friends_map = bctbx_mmap_cchar_new();
+	bctbx_pair_cchar_t *pair;
+	bctbx_iterator_t *it;
+	bctoolboxTimeSpec t1;
+	bctoolboxTimeSpec t2;
+	char key[64];
+	for(i = 0; i < 20000; i++) {
+		snprintf(key, sizeof(key),"key_%i",i);
+		pair = bctbx_pair_cchar_new(key,(void*)(uintptr_t)i);
+		bctbx_map_cchar_insert_and_delete(friends_map, (bctbx_pair_t*)pair);
+	}
+	bctbx_get_cur_time(&t1);
+	ms_message("Start : %li : %li\n", (long int)t1.tv_sec, (long int)t1.tv_nsec);
+	for(i = 0; i < 20000; i++) {
+		snprintf(key, sizeof(key),"key_%i",i);
+		it = bctbx_map_cchar_find_key(friends_map, key);
+		j = (int)(uintptr_t)bctbx_pair_cchar_get_second(bctbx_iterator_cchar_get_pair(it));
+		BC_ASSERT_TRUE(i == j);
+		bctbx_iterator_cchar_delete(it);
+	}
+	bctbx_get_cur_time(&t2);
+	ms_message("End : %li : %li\n", (long int)t2.tv_sec, (long int)t2.tv_nsec);
+	bctbx_mmap_cchar_delete(friends_map);
+}
+
 static void find_friend_by_ref_key_empty_list_test(void) {
 	LinphoneCoreManager* manager = linphone_core_manager_new2("empty_rc", FALSE);
 	LinphoneFriendList *lfl = linphone_core_get_default_friend_list(manager->lc);
@@ -834,6 +1027,8 @@ test_t vcard_tests[] = {
 	TEST_NO_TAG("Friends working if no db set", friends_if_no_db_set),
 	TEST_NO_TAG("Friends storage migration from rc to db", friends_migration),
 	TEST_NO_TAG("Friends storage in sqlite database", friends_sqlite_storage),
+	TEST_NO_TAG("20000 Friends storage in sqlite database", friends_sqlite_store_lot_of_friends),
+	TEST_NO_TAG("Find friend in database of 20000 objects", friends_sqlite_find_friend_in_lot_of_friends),
 #endif
 	TEST_NO_TAG("CardDAV clean", carddav_clean), // This is to ensure the content of the test addressbook is in the correct state for the following tests
 	TEST_NO_TAG("CardDAV synchronization", carddav_sync),
@@ -844,6 +1039,8 @@ test_t vcard_tests[] = {
 	TEST_NO_TAG("CardDAV multiple synchronizations", carddav_multiple_sync),
 	TEST_NO_TAG("CardDAV client to server and server to client sync", carddav_server_to_client_and_client_to_sever_sync),
 	TEST_NO_TAG("Find friend by ref key", find_friend_by_ref_key_test),
+	TEST_NO_TAG("create a map and insert 20000 objects", insert_lot_of_friends_map_test),
+	TEST_NO_TAG("Find ref key in 20000 objects map", find_friend_by_ref_key_in_lot_of_friends_test),
 	TEST_NO_TAG("Find friend by ref key in empty list", find_friend_by_ref_key_empty_list_test)
 
 };

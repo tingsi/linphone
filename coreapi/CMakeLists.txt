@@ -28,6 +28,10 @@ endif()
 if(NOT WIN32)
 	find_package(Iconv QUIET)
 endif()
+if(ANDROID)
+	find_package(CpuFeatures REQUIRED)
+	find_package(Support REQUIRED)
+endif()
 
 
 set(LINPHONE_PRIVATE_HEADER_FILES
@@ -150,8 +154,12 @@ set(LIBS
 	${BCTOOLBOX_CORE_LIBRARIES}
 	${BELLESIP_LIBRARIES}
 	${MEDIASTREAMER2_LIBRARIES}
+	${ORTP_LIBRARIES}
 	${XML2_LIBRARIES}
 )
+if(WIN32 AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
+	list(APPEND LIBS "Ws2_32")
+endif()
 if(ZLIB_FOUND)
 	list(APPEND LIBS ${ZLIB_LIBRARIES})
 endif()
@@ -186,20 +194,21 @@ else()
 	list(APPEND LINPHONE_SOURCE_FILES_C vcard_stubs.c)
 endif()
 
-apply_compile_flags(LINPHONE_SOURCE_FILES_C "CPP" "C")
-apply_compile_flags(LINPHONE_SOURCE_FILES_CXX "CPP" "CXX")
-apply_compile_flags(LINPHONE_SOURCE_FILES_OBJC "CPP" "OBJC")
+bc_apply_compile_flags(LINPHONE_SOURCE_FILES_C STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
+bc_apply_compile_flags(LINPHONE_SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_CXX)
+bc_apply_compile_flags(LINPHONE_SOURCE_FILES_OBJC STRICT_OPTIONS_CPP STRICT_OPTIONS_OBJC)
 
 if(ENABLE_STATIC)
 	add_library(linphone-static STATIC ${LINPHONE_HEADER_FILES} ${LINPHONE_PRIVATE_HEADER_FILES} ${LINPHONE_SOURCE_FILES_C} ${LINPHONE_SOURCE_FILES_CXX} ${LINPHONE_SOURCE_FILES_OBJC})
 	set_target_properties(linphone-static PROPERTIES OUTPUT_NAME linphone)
 	add_dependencies(linphone-static liblinphone-git-version)
-	target_link_libraries(linphone-static ${LIBS})
+	target_include_directories(linphone-static PUBLIC ${LINPHONE_INCLUDE_DIRS})
+	target_link_libraries(linphone-static INTERFACE ${LIBS})
 	if(ANDROID)
 		add_dependencies(linphone-static linphonecore-jni-header)
 	endif()
 	if(IOS)
-		target_link_libraries(linphone-static "-framework Foundation" "-framework AVFoundation")
+		target_link_libraries(linphone-static INTERFACE "-framework Foundation" "-framework AVFoundation")
 	endif()
 	install(TARGETS linphone-static EXPORT ${EXPORT_TARGETS_NAME}Targets
 		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -211,8 +220,8 @@ if(ENABLE_SHARED)
 
 	if(BELCARD_FOUND)
 		if(APPLE)
-	        set_target_properties(linphone PROPERTIES LINK_FLAGS "-stdlib=libc++")
-    	endif()
+			set_target_properties(linphone PROPERTIES LINK_FLAGS "-stdlib=libc++")
+		endif()
 	endif()
 
 	set_target_properties(linphone PROPERTIES LINKER_LANGUAGE CXX)
@@ -221,11 +230,13 @@ if(ENABLE_SHARED)
 		set_target_properties(linphone PROPERTIES SOVERSION ${LINPHONE_SO_VERSION})
 	endif()
 	add_dependencies(linphone liblinphone-git-version)
+	target_include_directories(linphone PUBLIC ${LINPHONE_INCLUDE_DIRS})
 	target_link_libraries(linphone PRIVATE ${LIBS})
 	if(WIN32 AND CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone" AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 		set_target_properties(linphone PROPERTIES PREFIX "lib")
 	elseif(ANDROID)
-		set_target_properties(linphone PROPERTIES OUTPUT_NAME "linphone-${NDK_ARCHITECTURE}")
+		target_link_libraries(linphone PUBLIC "log" ${SUPPORT_LIBRARIES} ${CPUFEATURES_LIBRARIES})
+		set_target_properties(linphone PROPERTIES OUTPUT_NAME "linphone-${CMAKE_ANDROID_ARCH_ABI}")
 		add_dependencies(linphone linphonecore-jni-header)
 	endif()
 	if(MSVC)

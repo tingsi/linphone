@@ -759,7 +759,7 @@ static void file_transfer_2_messages_simultaneously(void) {
 				linphone_chat_message_cbs_set_file_transfer_progress_indication(cbs, file_transfer_progress_indication);
 				linphone_chat_message_download_file(msg2);
 
-				BC_ASSERT_TRUE(wait_for(pauline->lc,marie->lc,&marie->stat.number_of_LinphoneFileTransferDownloadSuccessful,2));
+				BC_ASSERT_TRUE(wait_for_until(pauline->lc,marie->lc,&marie->stat.number_of_LinphoneFileTransferDownloadSuccessful,2,50000));
 
 				BC_ASSERT_EQUAL(pauline->stat.number_of_LinphoneMessageInProgress,4, int, "%d");
 				BC_ASSERT_EQUAL(pauline->stat.number_of_LinphoneMessageDelivered,2, int, "%d");
@@ -800,7 +800,7 @@ void info_message_received(LinphoneCore *lc, LinphoneCall* call, const LinphoneI
 	stats* counters = get_stats(lc);
 
 	if (counters->last_received_info_message) {
-		linphone_info_message_destroy(counters->last_received_info_message);
+		linphone_info_message_unref(counters->last_received_info_message);
 	}
 	counters->last_received_info_message=linphone_info_message_copy(msg);
 	counters->number_of_inforeceived++;
@@ -827,7 +827,7 @@ void info_message_base(bool_t with_content) {
 		linphone_content_unref(ct);
 	}
 	linphone_call_send_info_message(linphone_core_get_current_call(marie->lc),info);
-	linphone_info_message_destroy(info);
+	linphone_info_message_unref(info);
 
 	BC_ASSERT_TRUE(wait_for(pauline->lc,marie->lc,&pauline->stat.number_of_inforeceived,1));
 
@@ -1090,7 +1090,8 @@ static void im_notification_policy_with_lime(void) {
 static void _im_error_delivery_notification(bool_t online) {
 	FILE *ZIDCacheMarieFD, *ZIDCachePaulineFD;
 	LinphoneChatRoom *chat_room;
-	char *filepath;
+	char *marie_filepath;
+	char *pauline_filepath;
 	LinphoneCoreManager *marie = linphone_core_manager_new("marie_rc");
 	LinphoneCoreManager *pauline = linphone_core_manager_new( "pauline_tcp_rc");
 	LinphoneChatMessage *msg;
@@ -1114,13 +1115,12 @@ static void _im_error_delivery_notification(bool_t online) {
 	fclose(ZIDCacheMarieFD);
 	fclose(ZIDCachePaulineFD);
 
-	filepath = bc_tester_file("tmpZIDCacheMarie.xml");
-	linphone_core_set_zrtp_secrets_file(marie->lc, filepath);
-	bc_free(filepath);
+	marie_filepath = bc_tester_file("tmpZIDCacheMarie.xml");
+	linphone_core_set_zrtp_secrets_file(marie->lc, marie_filepath);
 
-	filepath = bc_tester_file("tmpZIDCachePauline.xml");
-	linphone_core_set_zrtp_secrets_file(pauline->lc, filepath);
-	bc_free(filepath);
+	pauline_filepath = bc_tester_file("tmpZIDCachePauline.xml");
+	linphone_core_set_zrtp_secrets_file(pauline->lc, pauline_filepath);
+	bc_free(pauline_filepath);
 
 	chat_room = linphone_core_get_chat_room(pauline->lc, marie->identity);
 
@@ -1154,13 +1154,21 @@ static void _im_error_delivery_notification(bool_t online) {
 	wait_for_until(pauline->lc, marie->lc, &dummy, 1, 1500); /* Just to sleep while iterating */
 	BC_ASSERT_EQUAL(marie->stat.number_of_LinphoneMessageReceived, 1, int, "%d"); /* Check the new message is not considered as received */
 	BC_ASSERT_TRUE(wait_for(pauline->lc, marie->lc, &pauline->stat.number_of_LinphoneMessageNotDelivered, 1));
+
+	/* Restore the ZID cache of the receiver and resend the chat message */
+	linphone_core_set_zrtp_secrets_file(marie->lc, marie_filepath);
+	linphone_chat_message_ref(msg);
+	linphone_chat_message_resend(msg);
+	BC_ASSERT_TRUE(wait_for(pauline->lc, marie->lc, &marie->stat.number_of_LinphoneMessageReceived, 2)); /* Check the new message is now received */
+	BC_ASSERT_TRUE(wait_for(pauline->lc, marie->lc, &pauline->stat.number_of_LinphoneMessageDeliveredToUser, 1));
 	linphone_chat_message_unref(msg);
+	bc_free(marie_filepath);
 
 end:
-	remove("tmpZIDCacheMarie.xml");
-	remove("tmpZIDCachePauline.xml");
 	linphone_core_manager_destroy(marie);
 	linphone_core_manager_destroy(pauline);
+	remove("tmpZIDCacheMarie.xml");
+	remove("tmpZIDCachePauline.xml");
 }
 
 static void im_error_delivery_notification_online(void) {
@@ -1260,7 +1268,11 @@ static void lime_text_message_to_non_lime(bool_t sender_policy_mandatory, bool_t
 		if (chat_room_size == 1) {
 			bctbx_list_t *history = linphone_chat_room_get_history(chat_room, 0);
 			LinphoneChatMessage *sent_msg = (LinphoneChatMessage *)bctbx_list_get_data(history);
-			BC_ASSERT_EQUAL((int)linphone_chat_message_get_state(sent_msg), (int)LinphoneChatMessageStateNotDelivered, int, "%d");
+			if (lime_key_available) {
+				BC_ASSERT_EQUAL((int)linphone_chat_message_get_state(sent_msg), (int)LinphoneChatMessageStateDelivered, int, "%d");
+			} else {
+				BC_ASSERT_EQUAL((int)linphone_chat_message_get_state(sent_msg), (int)LinphoneChatMessageStateNotDelivered, int, "%d");
+			}
 			bctbx_list_free_with_data(history, (bctbx_list_free_func)linphone_chat_message_unref);
 		}
 	} else {
@@ -2492,6 +2504,76 @@ void text_message_with_custom_content_type_and_lime(void) {
 	_text_message_with_custom_content_type(TRUE);
 }
 
+char* xor(char* message, char* key) {
+	size_t messagelen = strlen(message);
+	size_t keylen = strlen(key);
+	char* encrypted = (char *)ms_malloc(messagelen+1);
+
+	int i;
+	for(i = 0; i < (int)messagelen; i++) {
+		encrypted[i] = message[i] ^ key[i % keylen];
+	}
+	encrypted[messagelen] = '\0';
+
+	return encrypted;
+}
+
+int xor_im_encryption_engine_process_incoming_message_cb(LinphoneImEncryptionEngine *engine, LinphoneChatRoom *room, LinphoneChatMessage *msg) {
+	char *new_content_type = "cipher/xor";
+	if (msg->content_type) {
+		if (strcmp(msg->content_type, new_content_type) == 0) {
+			msg->message = xor(msg->message, "SuperSecretXorKey");
+			msg->content_type = ms_strdup("text/plain");
+			return 0;
+		} else if (strcmp(msg->content_type, "text/plain") == 0) {
+			return -1; // Not encrypted, nothing to do
+		} else {
+			return 488; // Not acceptable
+		}
+	}
+	return 500;
+}
+
+int xor_im_encryption_engine_process_outgoing_message_cb(LinphoneImEncryptionEngine *engine, LinphoneChatRoom *room, LinphoneChatMessage *msg) {
+	char *new_content_type = "cipher/xor";
+	msg->message = xor(msg->message, "SuperSecretXorKey");
+	msg->content_type = ms_strdup(new_content_type);
+	return 0;
+}
+
+void im_encryption_engine_xor(void) {
+	LinphoneChatMessage *chat_msg = NULL;
+	LinphoneChatRoom* chat_room = NULL;
+	LinphoneCoreManager* marie = linphone_core_manager_new("marie_rc");
+	LinphoneImEncryptionEngine *marie_imee = linphone_im_encryption_engine_new(marie->lc);
+	LinphoneImEncryptionEngineCbs *marie_cbs = linphone_im_encryption_engine_get_callbacks(marie_imee);
+	LinphoneCoreManager* pauline = linphone_core_manager_new( "pauline_tcp_rc");
+	LinphoneImEncryptionEngine *pauline_imee = linphone_im_encryption_engine_new(pauline->lc);
+	LinphoneImEncryptionEngineCbs *pauline_cbs = linphone_im_encryption_engine_get_callbacks(pauline_imee);
+	
+	linphone_im_encryption_engine_cbs_set_process_incoming_message(marie_cbs, xor_im_encryption_engine_process_incoming_message_cb);
+	linphone_im_encryption_engine_cbs_set_process_outgoing_message(marie_cbs, xor_im_encryption_engine_process_outgoing_message_cb);
+	linphone_im_encryption_engine_cbs_set_process_incoming_message(pauline_cbs, xor_im_encryption_engine_process_incoming_message_cb);
+	linphone_im_encryption_engine_cbs_set_process_outgoing_message(pauline_cbs, xor_im_encryption_engine_process_outgoing_message_cb);
+	
+	linphone_core_set_im_encryption_engine(marie->lc, marie_imee);
+	linphone_core_set_im_encryption_engine(pauline->lc, pauline_imee);
+
+	chat_room = linphone_core_get_chat_room(pauline->lc, marie->identity);
+	chat_msg = linphone_chat_room_create_message(chat_room, "Bla bla bla bla");
+	linphone_chat_room_send_chat_message(chat_room, chat_msg);
+	BC_ASSERT_TRUE(wait_for(pauline->lc,marie->lc,&marie->stat.number_of_LinphoneMessageReceived,1));
+	BC_ASSERT_PTR_NOT_NULL(marie->stat.last_received_chat_message);
+	if (marie->stat.last_received_chat_message) {
+		BC_ASSERT_STRING_EQUAL(linphone_chat_message_get_text(marie->stat.last_received_chat_message), "Bla bla bla bla");
+	}
+	BC_ASSERT_PTR_NOT_NULL(linphone_core_get_chat_room(marie->lc,pauline->identity));
+	
+	linphone_im_encryption_engine_unref(marie_imee);
+	linphone_im_encryption_engine_unref(pauline_imee);
+	linphone_core_manager_destroy(marie);
+	linphone_core_manager_destroy(pauline);
+}
 
 test_t message_tests[] = {
 	TEST_NO_TAG("Text message", text_message),
@@ -2564,7 +2646,8 @@ test_t message_tests[] = {
 	TEST_ONE_TAG("Real Time Text copy paste", real_time_text_copy_paste, "RTT"),
 	TEST_NO_TAG("IM Encryption Engine custom headers", chat_message_custom_headers),
 	TEST_NO_TAG("Text message with custom content-type", text_message_with_custom_content_type),
-	TEST_ONE_TAG("Text message with custom content-type and lime", text_message_with_custom_content_type_and_lime, "LIME")
+	TEST_ONE_TAG("Text message with custom content-type and lime", text_message_with_custom_content_type_and_lime, "LIME"),
+	TEST_NO_TAG("IM Encryption Engine XOR", im_encryption_engine_xor)
 };
 
 test_suite_t message_test_suite = {

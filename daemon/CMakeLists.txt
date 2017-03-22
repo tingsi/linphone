@@ -91,6 +91,7 @@ set(DAEMON_SOURCE_FILES
 	commands/quit.h
 	commands/register.cc
 	commands/register.h
+	commands/register-info.cc
 	commands/register-status.cc
 	commands/register-status.h
 	commands/terminate.cc
@@ -109,12 +110,12 @@ set(DAEMON_PIPETEST_SOURCE_FILES
 	daemon-pipetest.c
 )
 
-apply_compile_flags(DAEMON_SOURCE_FILES "CPP" "CXX")
-apply_compile_flags(DAEMON_PIPETEST_SOURCE_FILES "CPP" "C")
+bc_apply_compile_flags(DAEMON_SOURCE_FILES STRICT_OPTIONS_CPP STRICT_OPTIONS_CXX)
+bc_apply_compile_flags(DAEMON_PIPETEST_SOURCE_FILES STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
 
 add_executable(linphone-daemon ${DAEMON_SOURCE_FILES})
 target_include_directories(linphone-daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(linphone-daemon ${LINPHONE_LIBS_FOR_TOOLS} ${MEDIASTREAMER2_LIBRARIES})
+target_link_libraries(linphone-daemon ${LINPHONE_LIBS_FOR_TOOLS} ${MEDIASTREAMER2_LIBRARIES} ${ORTP_LIBRARIES} ${BCTOOLBOX_CORE_LIBRARIES})
 set_target_properties(linphone-daemon PROPERTIES LINK_FLAGS "${LINPHONE_LDFLAGS}")
 
 add_executable(linphone-daemon-pipetest ${DAEMON_PIPETEST_SOURCE_FILES})

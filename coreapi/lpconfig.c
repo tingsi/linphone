@@ -93,11 +93,11 @@ struct _LpConfig{
 };
 
 BELLE_SIP_DECLARE_NO_IMPLEMENTED_INTERFACES(LinphoneConfig);
-BELLE_SIP_DECLARE_VPTR(LinphoneConfig);
+BELLE_SIP_DECLARE_VPTR_NO_EXPORT(LinphoneConfig);
 
 
 char* lp_realpath(const char* file, char* name) {
-#if defined(_WIN32) || defined(__QNX__) || defined(ANDROID)
+#if defined(_WIN32) || defined(__QNX__) || defined(__ANDROID__)
 	return ms_strdup(file);
 #else
 	char * output = realpath(file, name);
