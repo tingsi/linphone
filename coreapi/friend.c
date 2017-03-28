@@ -115,7 +115,11 @@ static LinphoneFriendPresence * find_presence_model_for_uri_or_tel(const Linphon
 		ms_warning("Cannot find uri of tel [%s] from friend [%p] because not associated to any Linphone core object",uri_or_tel,lf);
 		return NULL;
 	}
-	iterator = lf->presence_models;
+	if ((iterator = lf->presence_models) == NULL) {
+		/*no need to move forward, just reutn to avoid useless uri parsing*/
+		return NULL;
+	};
+	
 	uri_or_tel_addr = linphone_core_interpret_url(lf->lc, uri_or_tel);
 
 	while (uri_or_tel_addr && iterator) {
@@ -659,23 +663,23 @@ LinphoneOnlineStatus linphone_friend_get_status(const LinphoneFriend *lf){
 
 const LinphonePresenceModel * linphone_friend_get_presence_model(const LinphoneFriend *lf) {
 	const LinphonePresenceModel *presence = NULL;
-	LinphoneFriend* fuckconst = (LinphoneFriend*)lf;
-	const bctbx_list_t* addrs = linphone_friend_get_addresses(fuckconst);
+	LinphoneFriend* const_lf = (LinphoneFriend*)lf;
+	const bctbx_list_t* addrs = linphone_friend_get_addresses(const_lf);
 	bctbx_list_t* phones = NULL;
 	bctbx_list_t *it;
 
 	for (it = (bctbx_list_t *)addrs; it!= NULL; it = it->next) {
 		LinphoneAddress *addr = (LinphoneAddress*)it->data;
 		char *uri = linphone_address_as_string_uri_only(addr);
-		presence = linphone_friend_get_presence_model_for_uri_or_tel(fuckconst, uri);
+		presence = linphone_friend_get_presence_model_for_uri_or_tel(const_lf, uri);
 		ms_free(uri);
 		if (presence) break;
 	}
 	if (presence) return presence;
 
-	phones = linphone_friend_get_phone_numbers(fuckconst);
+	phones = linphone_friend_get_phone_numbers(const_lf);
 	for (it = phones; it!= NULL; it = it->next) {
-		presence = linphone_friend_get_presence_model_for_uri_or_tel(fuckconst, it->data);
+		presence = linphone_friend_get_presence_model_for_uri_or_tel(const_lf, it->data);
 		if (presence) break;
 	}
 	bctbx_list_free(phones);

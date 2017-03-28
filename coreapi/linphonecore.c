@@ -1186,6 +1186,7 @@ static void sound_config_read(LinphoneCore *lc)
 #endif
 	tmp=lp_config_get_int(lc->config,"sound","echocancellation",tmp);
 	linphone_core_enable_echo_cancellation(lc,tmp);
+	linphone_core_set_echo_canceller_filter_name(lc, linphone_core_get_echo_canceller_filter_name(lc));
 	linphone_core_enable_echo_limiter(lc,
 		lp_config_get_int(lc->config,"sound","echolimiter",0));
 	linphone_core_enable_agc(lc,
@@ -1204,7 +1205,7 @@ static void sound_config_read(LinphoneCore *lc)
 
 static void certificates_config_read(LinphoneCore *lc) {
 	LinphoneFactory *factory = linphone_factory_get();
-	char *data_dir = linphone_factory_get_data_resources_dir(factory);
+	const char *data_dir = linphone_factory_get_data_resources_dir(factory);
 	char *root_ca_path = bctbx_strdup_printf("%s/rootca.pem", data_dir);
 	const char *rootca = lp_config_get_string(lc->config,"sip","root_ca", NULL);
 	// If rootca is not existing anymore, we reset it to the default value
@@ -1225,13 +1226,12 @@ static void certificates_config_read(LinphoneCore *lc) {
 	linphone_core_verify_server_certificates(lc,lp_config_get_int(lc->config,"sip","verify_server_certs",TRUE));
 	linphone_core_verify_server_cn(lc,lp_config_get_int(lc->config,"sip","verify_server_cn",TRUE));
 	bctbx_free(root_ca_path);
-	bctbx_free(data_dir);
 }
 
 static void sip_config_read(LinphoneCore *lc) {
 	char *contact;
 	const char *tmpstr;
-	LCSipTransports tr;
+	LinphoneSipTransports tr;
 	int i,tmp;
 	int ipv6_default = TRUE;
 
@@ -2093,8 +2093,8 @@ static void linphone_core_init(LinphoneCore * lc, LinphoneCoreCbs *cbs, LpConfig
 	const char *remote_provisioning_uri = NULL;
 	LinphoneFactory *lfactory = linphone_factory_get();
 	LinphoneCoreCbs *internal_cbs = _linphone_core_cbs_new();
-	char *msplugins_dir;
-	char *image_resources_dir;
+	const char *msplugins_dir;
+	const char *image_resources_dir;
 
 	ms_message("Initializing LinphoneCore %s", linphone_core_get_version());
 
@@ -2128,8 +2128,6 @@ static void linphone_core_init(LinphoneCore * lc, LinphoneCoreCbs *cbs, LpConfig
 	msplugins_dir = linphone_factory_get_msplugins_dir(lfactory);
 	image_resources_dir = linphone_factory_get_image_resources_dir(lfactory);
 	lc->factory = ms_factory_new_with_voip_and_directories(msplugins_dir, image_resources_dir);
-	if (msplugins_dir) bctbx_free(msplugins_dir);
-	bctbx_free(image_resources_dir);
 	linphone_core_register_default_codecs(lc);
 	linphone_core_register_offer_answer_providers(lc);
 	/* Get the mediastreamer2 event queue */
@@ -2578,7 +2576,7 @@ void linphone_core_set_use_rfc2833_for_dtmf(LinphoneCore *lc,bool_t use_rfc2833)
 }
 
 int linphone_core_get_sip_port(LinphoneCore *lc){
-	LCSipTransports tr;
+	LinphoneSipTransports tr;
 	linphone_core_get_sip_transports_used(lc,&tr);
 	return tr.udp_port>0 ? tr.udp_port : (tr.tcp_port > 0 ? tr.tcp_port : tr.tls_port);
 }
@@ -2613,7 +2611,7 @@ static void transport_error(LinphoneCore *lc, const char* transport, int port){
 	ms_free(msg);
 }
 
-static bool_t transports_unchanged(const LCSipTransports * tr1, const LCSipTransports * tr2){
+static bool_t transports_unchanged(const LinphoneSipTransports * tr1, const LinphoneSipTransports * tr2){
 	return
 		tr2->udp_port==tr1->udp_port &&
 		tr2->tcp_port==tr1->tcp_port &&
@@ -2635,7 +2633,7 @@ static void __linphone_core_invalidate_registers(LinphoneCore* lc){
 int _linphone_core_apply_transports(LinphoneCore *lc){
 	Sal *sal=lc->sal;
 	const char *anyaddr;
-	LCSipTransports *tr=&lc->sip_conf.transports;
+	LinphoneSipTransports *tr=&lc->sip_conf.transports;
 	const char* listening_address;
 	/*first of all invalidate all current registrations so that we can register again with new transports*/
 	__linphone_core_invalidate_registers(lc);
@@ -2683,7 +2681,7 @@ bool_t linphone_core_sip_transport_supported(const LinphoneCore *lc, LinphoneTra
 }
 
 int linphone_core_set_sip_transports(LinphoneCore *lc, const LCSipTransports * tr_config /*config to be saved*/){
-	LCSipTransports tr=*tr_config;
+	LinphoneSipTransports tr=*tr_config;
 
 	if (lp_config_get_int(lc->config,"sip","sip_random_port",0)==1) {
 		/*legacy random mode*/
@@ -2728,7 +2726,7 @@ void linphone_core_get_sip_transports_used(LinphoneCore *lc, LinphoneSipTranspor
 }
 
 void linphone_core_set_sip_port(LinphoneCore *lc,int port) {
-	LCSipTransports tr;
+	LinphoneSipTransports tr;
 	memset(&tr,0,sizeof(tr));
 	tr.udp_port=port;
 	linphone_core_set_sip_transports (lc,&tr);
@@ -2998,7 +2996,8 @@ void linphone_core_iterate(LinphoneCore *lc){
 				ms_message("incoming call timeout (%i)",lc->sip_conf.inc_timeout);
 				decline_reason = (lc->current_call != call) ? LinphoneReasonBusy : LinphoneReasonDeclined;
 				call->log->status=LinphoneCallMissed;
-				sal_error_info_set(&call->non_op_error,SalReasonRequestTimeout,408,"Not answered",NULL);
+				call->non_op_error = TRUE;
+				linphone_error_info_set(call->ei, decline_reason, linphone_reason_to_error_code(decline_reason), "Not answered", NULL);
 				linphone_call_decline(call, decline_reason);
 			}
 		}
@@ -5500,7 +5499,7 @@ void sip_config_uninit(LinphoneCore *lc)
 	/*now that we are unregisted, there is no more channel using tunnel socket we no longer need the tunnel.*/
 #ifdef TUNNEL_ENABLED
 	if (lc->tunnel) {
-		linphone_tunnel_destroy(lc->tunnel);
+		linphone_tunnel_ref(lc->tunnel);
 		lc->tunnel=NULL;
 		ms_message("Tunnel destroyed.");
 	}

@@ -125,6 +125,11 @@
 extern "C" {
 #endif
 
+
+#define STRING_RESET(field)	if (field) bctbx_free(field); (field) = NULL
+#define STRING_SET(field, value)	do{ if (field){bctbx_free(field);field=NULL;}; field=bctbx_strdup(value); }while(0)
+#define STRING_TRANSFER(field, newvalue)	do{ if (field){bctbx_free(field);field=NULL;}; field=newvalue; }while(0)
+
 struct _LinphoneCallParams{
 	belle_sip_object_t base;
 	void *user_data;
@@ -230,6 +235,7 @@ struct _LinphoneChatMessage {
 	belle_sip_object_t base;
 	LinphoneChatRoom* chat_room;
 	LinphoneChatMessageCbs *callbacks;
+	LinphoneErrorInfo *ei;
 	LinphoneChatMessageDir dir;
 	char* message;
 	void* message_state_changed_user_data;
@@ -288,7 +294,7 @@ struct _LinphoneCall{
 	belle_sip_object_t base;
 	void *user_data;
 	struct _LinphoneCore *core;
-	SalErrorInfo non_op_error;
+	LinphoneErrorInfo *ei;
 	int af; /*the address family to prefer for RTP path, guessed from signaling path*/
 	LinphoneCallDir dir;
 	SalMediaDescription *biggestdesc; /*media description with all already proposed streams, used to remember the mapping of streams*/
@@ -370,7 +376,9 @@ struct _LinphoneCall{
 	bool_t broken; /*set to TRUE when the call is in broken state due to network disconnection or transport */
 	bool_t defer_notify_incoming;
 	bool_t need_localip_refresh;
+	
 	bool_t reinvite_on_cancel_response_requested;
+	bool_t non_op_error; /*set when the LinphoneErrorInfo was set at higher level than sal*/
 };
 
 BELLE_SIP_DECLARE_VPTR_NO_EXPORT(LinphoneCall);
@@ -624,6 +632,7 @@ struct _LinphoneProxyConfig
 	belle_sip_object_t base;
 	void *user_data;
 	struct _LinphoneCore *lc;
+	LinphoneErrorInfo *ei;
 	char *reg_proxy;
 	char *reg_identity;
 	LinphoneAddress* identity_address;
@@ -802,7 +811,7 @@ typedef struct sip_config
 	int in_call_timeout;	/*timeout after a call is hangup */
 	int delayed_timeout; 	/*timeout after a delayed call is resumed */
 	unsigned int keepalive_period; /* interval in ms between keep alive messages sent to the proxy server*/
-	LCSipTransports transports;
+	LinphoneSipTransports transports;
 	bool_t guess_hostname;
 	bool_t loopback_only;
 	bool_t ipv6_enabled;
@@ -1102,6 +1111,7 @@ struct _LinphoneCore
 
 struct _LinphoneEvent{
 	belle_sip_object_t base;
+	LinphoneErrorInfo *ei;
 	LinphoneSubscriptionDir dir;
 	LinphoneCore *lc;
 	SalOp *op;
@@ -1552,10 +1562,7 @@ void linphone_xml_xpath_context_init_carddav_ns(xmlparsing_context_t *xml_ctx);
 char * linphone_timestamp_to_rfc3339_string(time_t timestamp);
 
 
-static MS2_INLINE const LinphoneErrorInfo *linphone_error_info_from_sal_op(const SalOp *op){
-	if (op==NULL) return (LinphoneErrorInfo*)sal_error_info_none();
-	return (const LinphoneErrorInfo*)sal_op_get_error_info(op);
-}
+void linphone_error_info_from_sal_op(LinphoneErrorInfo *ei, const SalOp *op);
 
 static MS2_INLINE void payload_type_set_enable(PayloadType *pt,int value)
 {
@@ -1645,7 +1652,7 @@ BELLE_SIP_TYPE_ID(LinphonePresenceService),
 BELLE_SIP_TYPE_ID(LinphonePresencePerson),
 BELLE_SIP_TYPE_ID(LinphonePresenceActivity),
 BELLE_SIP_TYPE_ID(LinphonePresenceNote),
-BELLE_SIP_TYPE_ID(LinphoneTunnel),
+BELLE_SIP_TYPE_ID(LinphoneErrorInfo),
 BELLE_SIP_TYPE_ID(LinphoneConferenceParams),
 BELLE_SIP_TYPE_ID(LinphoneConference),
 BELLE_SIP_TYPE_ID(LinphoneInfoMessage)
@@ -1771,6 +1778,18 @@ char *linphone_presence_model_to_xml(LinphonePresenceModel *model) ;
 void linphone_call_check_ice_session(LinphoneCall *call, IceRole role, bool_t is_reinvite);
 
 bool_t linphone_call_state_is_early(LinphoneCallState state);
+
+struct _LinphoneErrorInfo{
+	belle_sip_object_t base;
+	LinphoneReason reason;
+	char *protocol; /* */
+	int protocol_code; /*from SIP response*/
+	char *phrase; /*from SIP response*/
+	char *warnings; /*from SIP response*/
+	char *full_string; /*concatenation of status_string + warnings*/
+	struct _LinphoneErrorInfo *sub_ei;
+};
+BELLE_SIP_DECLARE_VPTR_NO_EXPORT(LinphoneErrorInfo);
 
 #ifdef __cplusplus
 }

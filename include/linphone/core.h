@@ -184,24 +184,28 @@ typedef LinphoneCoreCbsRegistrationStateChangedCb LinphoneCoreRegistrationStateC
 /**
  * Callback prototype
  * @deprecated
+ * @donotwrap
  */
 typedef void (*ShowInterfaceCb)(LinphoneCore *lc);
 
 /**
  * Callback prototype
  * @deprecated
+ * @donotwrap
  */
 typedef void (*DisplayStatusCb)(LinphoneCore *lc, const char *message);
 
 /**
  * Callback prototype
  * @deprecated
+ * @donotwrap
  */
 typedef void (*DisplayMessageCb)(LinphoneCore *lc, const char *message);
 
 /**
  * Callback prototype
  * @deprecated
+ * @donotwrap
  */
 typedef void (*DisplayUrlCb)(LinphoneCore *lc, const char *message, const char *url);
 
@@ -289,11 +293,12 @@ typedef LinphoneCoreCbsCallLogUpdatedCb LinphoneCoreCallLogUpdatedCb;
 
 /**
  * Callback prototype
- * @deprecated use #LinphoneCoreMessageReceivedCb instead.
  * @param lc #LinphoneCore object
  * @param room #LinphoneChatRoom involved in this conversation. Can be be created by the framework in case \link #LinphoneAddress the from \endlink is not present in any chat room.
  * @param from #LinphoneAddress from
  * @param message incoming message
+ * @deprecated use #LinphoneCoreMessageReceivedCb instead.
+ * @donotwrap
  */
 typedef void (*LinphoneCoreTextMessageReceivedCb)(LinphoneCore *lc, LinphoneChatRoom *room, const LinphoneAddress *from, const char *message);
 
@@ -605,6 +610,7 @@ LINPHONE_PUBLIC void *linphone_core_cbs_get_user_data(const LinphoneCoreCbs *cbs
  * This is meant only to be called from a callback to be able to get the user_data associated with the #LinphoneCoreCbs that is calling the callback.
  * @param lc the linphonecore
  * @return the #LinphoneCoreCbs that has called the last callback
+ * @donotwrap
  */
 LINPHONE_PUBLIC LinphoneCoreCbs *linphone_core_get_current_callbacks(const LinphoneCore *lc);
 
@@ -1095,29 +1101,25 @@ LINPHONE_PUBLIC void linphone_core_set_log_level_mask(unsigned int loglevel);
 
 /**
  * Enable logs in supplied FILE*.
- *
- * @deprecated Use #linphone_core_set_log_file and #linphone_core_set_log_level instead.
- *
  * @param file a C FILE* where to fprintf logs. If null stdout is used.
- *
+ * @deprecated Use #linphone_core_set_log_file and #linphone_core_set_log_level instead.
+ * @donotwrap
 **/
 LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_enable_logs(FILE *file);
 
 /**
  * Enable logs through the user's supplied log callback.
- *
- * @deprecated Use #linphone_core_set_log_handler and #linphone_core_set_log_level instead.
- *
  * @param logfunc The address of a OrtpLogFunc callback whose protoype is
  *            	  typedef void (*OrtpLogFunc)(OrtpLogLevel lev, const char *fmt, va_list args);
- *
+ * @deprecated Use #linphone_core_set_log_handler and #linphone_core_set_log_level instead.
+ * @donotwrap
 **/
 LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_enable_logs_with_cb(OrtpLogFunc logfunc);
 
 /**
  * Entirely disable logging.
- *
  * @deprecated Use #linphone_core_set_log_level instead.
+ * @donotwrap
 **/
 LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_disable_logs(void);
 
@@ -1139,11 +1141,13 @@ LINPHONE_PUBLIC const char *linphone_core_get_user_agent(LinphoneCore *lc);
 
 /**
  * @deprecated Use #linphone_core_get_user_agent instead.
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED const char *linphone_core_get_user_agent_name(void);
 
 /**
  * @deprecated Use #linphone_core_get_user_agent instead.
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED const char *linphone_core_get_user_agent_version(void);
 
@@ -1170,6 +1174,7 @@ LINPHONE_PUBLIC LINPHONE_DEPRECATED const char *linphone_core_get_user_agent_ver
  *        callbacks) using linphone_core_get_user_data().
  * @see linphone_core_new_with_config
  * @deprecated Use linphone_factory_create_core() instead.
+ * @donotwrap
 **/
 LINPHONE_DEPRECATED LINPHONE_PUBLIC LinphoneCore *linphone_core_new(const LinphoneCoreVTable *vtable,
 						const char *config_path, const char *factory_config_path, void* userdata);
@@ -1186,6 +1191,7 @@ LINPHONE_DEPRECATED LINPHONE_PUBLIC LinphoneCore *linphone_core_new(const Linpho
  *        callbacks) using linphone_core_get_user_data().
  * @see linphone_core_new
  * @deprecated Use linphone_factory_create_core_with_config() instead.
+ * @donotwrap
 **/
 LINPHONE_DEPRECATED LINPHONE_PUBLIC LinphoneCore *linphone_core_new_with_config(const LinphoneCoreVTable *vtable, LpConfig *config, void *userdata);
 
@@ -1229,6 +1235,7 @@ LINPHONE_PUBLIC void linphone_core_iterate(LinphoneCore *lc);
  * @param vtable a LinphoneCoreVTable structure holding your application callbacks. Object is owned by linphone core until linphone_core_remove_listener.
  * @param lc object
  * @deprecated Use linphone_core_add_callbacks() instead.
+ * @donotwrap
  */
 LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_add_listener(LinphoneCore *lc, LinphoneCoreVTable *vtable);
 
@@ -1247,6 +1254,7 @@ LINPHONE_PUBLIC void linphone_core_add_callbacks(LinphoneCore *lc, LinphoneCoreC
  * @param lc object
  * @param vtable a LinphoneCoreVTable structure holding your application callbacks.
  * @deprecated Use linphone_core_remove_callbacks() instead.
+ * @donotwrap
  */
 LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_remove_listener(LinphoneCore *lc, const LinphoneCoreVTable *vtable);
 
@@ -1632,7 +1640,7 @@ LINPHONE_PUBLIC LinphoneCall *linphone_core_get_call_by_remote_address2(Linphone
  * This function only works during calls. The dtmf is automatically played to the user.
  * @param lc The LinphoneCore object
  * @param dtmf The dtmf name specified as a char, such as '0', '#' etc...
- *
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_send_dtmf(LinphoneCore *lc, char dtmf);
 
@@ -2012,6 +2020,7 @@ LINPHONE_PUBLIC bool_t linphone_core_payload_type_enabled(LinphoneCore *lc, cons
  * @return TRUE if the payload type represents a VBR codec, FALSE if disabled.
  * @ingroup media_parameters
  * @deprecated Use linphone_payload_type_is_vbr() instead
+ * @donotwrap
  */
 LINPHONE_PUBLIC LINPHONE_DEPRECATED bool_t linphone_core_payload_type_is_vbr(LinphoneCore *lc, const LinphonePayloadType *pt);
 
@@ -2071,6 +2080,7 @@ LINPHONE_PUBLIC LinphonePayloadType* linphone_core_find_payload_type(LinphoneCor
  * Returns the payload type number assigned for this codec.
  * @ingroup media_parameters
  * @deprecated Use linphone_payload_type_get_number() instead
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_payload_type_number(LinphoneCore *lc, const PayloadType *pt);
 
@@ -2079,6 +2089,7 @@ LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_payload_type_number(Li
  * to override the automatic assignment mechanism.
  * @ingroup media_parameters
  * @deprecated Use linphone_payload_type_set_number() instead
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_payload_type_number(LinphoneCore *lc, PayloadType *pt, int number);
 
@@ -2136,6 +2147,7 @@ LINPHONE_PUBLIC void linphone_core_set_default_proxy_index(LinphoneCore *lc, int
 /**
  * @return the default proxy configuration, that is the one used to determine the current identity.
  * @deprecated Use linphone_core_get_default_proxy_config() instead.
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_default_proxy(LinphoneCore *lc, LinphoneProxyConfig **config);
 
@@ -2470,8 +2482,9 @@ LINPHONE_PUBLIC bool_t linphone_core_get_use_rfc2833_for_dtmf(LinphoneCore *lc);
  * @param[in] port The UDP port to be used by SIP
  * @ingroup network_parameters
  * @deprecated use linphone_core_set_sip_transports() instead.
+ * @donotwrap
 **/
-LINPHONE_PUBLIC void linphone_core_set_sip_port(LinphoneCore *lc, int port);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_sip_port(LinphoneCore *lc, int port);
 
 /**
  * Gets the UDP port used by SIP.
@@ -2479,8 +2492,9 @@ LINPHONE_PUBLIC void linphone_core_set_sip_port(LinphoneCore *lc, int port);
  * @return The UDP port used by SIP
  * @ingroup network_parameters
  * @deprecated use linphone_core_get_sip_transports() instead.
+ * @donotwrap
 **/
-LINPHONE_PUBLIC int linphone_core_get_sip_port(LinphoneCore *lc);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_sip_port(LinphoneCore *lc);
 
 /**
  * Sets the ports to be used for each of transport (UDP or TCP)
@@ -2501,6 +2515,7 @@ LINPHONE_PUBLIC int linphone_core_set_sip_transports(LinphoneCore *lc, const Lin
  * @param[out] transports A #LinphoneSipTransports structure that will receive the configured ports
  * @return 0
  * @ingroup network_parameters
+ * @donotwrap
 **/
 LINPHONE_PUBLIC int linphone_core_get_sip_transports(LinphoneCore *lc, LinphoneSipTransports *transports);
 
@@ -2511,6 +2526,7 @@ LINPHONE_PUBLIC int linphone_core_get_sip_transports(LinphoneCore *lc, LinphoneS
  * @param[in] lc LinphoneCore object
  * @param[out] tr A #LinphoneSipTransports structure that will receive the ports being used
  * @ingroup network_parameters
+ * @donotwrap
 **/
 LINPHONE_PUBLIC void linphone_core_get_sip_transports_used(LinphoneCore *lc, LinphoneSipTransports *tr);
 
@@ -2652,6 +2668,7 @@ LINPHONE_PUBLIC const char *linphone_core_get_nat_address(const LinphoneCore *lc
  * @param[in] pol The #LinphoneFirewallPolicy to use.
  * @ingroup network_parameters
  * @deprecated Use linphone_core_set_nat_policy() instead.
+ * @donotwrap
  */
 LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_set_firewall_policy(LinphoneCore *lc, LinphoneFirewallPolicy pol);
 
@@ -2660,7 +2677,8 @@ LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_set_firewall_policy(Linph
  * @param[in] lc #LinphoneCore object.
  * @return The #LinphoneFirewallPolicy that is being used.
  * @ingroup network_parameters
- * @deprecated Use linphone_core_get_nat_policy() instead.
+ * @deprecated Use linphone_core_get_nat_policy() instead
+ * @donotwrap
  */
 LINPHONE_DEPRECATED LINPHONE_PUBLIC LinphoneFirewallPolicy linphone_core_get_firewall_policy(const LinphoneCore *lc);
 
@@ -2729,6 +2747,7 @@ LINPHONE_PUBLIC bool_t linphone_core_sound_device_can_playback(LinphoneCore *lc,
  * Get ring sound level in 0-100 scale.
  * @ingroup media_parameters
  * @deprecated
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_ring_level(LinphoneCore *lc);
 
@@ -2736,6 +2755,7 @@ LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_ring_level(LinphoneCor
  * Get playback sound level in 0-100 scale.
  * @ingroup media_parameters
  * @deprecated
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_play_level(LinphoneCore *lc);
 
@@ -2743,6 +2763,7 @@ LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_play_level(LinphoneCor
  * Get sound capture level in 0-100 scale.
  * @ingroup media_parameters
  * @deprecated
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_rec_level(LinphoneCore *lc);
 
@@ -2750,6 +2771,7 @@ LINPHONE_PUBLIC LINPHONE_DEPRECATED int linphone_core_get_rec_level(LinphoneCore
  * Set sound ring level in 0-100 scale.
  * @ingroup media_parameters
  * @deprecated
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_ring_level(LinphoneCore *lc, int level);
 
@@ -2757,6 +2779,7 @@ LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_ring_level(LinphoneCo
  * Set sound playback level in 0-100 scale.
  * @deprecated
  * @ingroup media_parameters
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_play_level(LinphoneCore *lc, int level);
 
@@ -2764,6 +2787,7 @@ LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_play_level(LinphoneCo
  * Set sound capture level in 0-100 scale.
  * @deprecated
  * @ingroup media_parameters
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_rec_level(LinphoneCore *lc, int level);
 
@@ -3036,12 +3060,14 @@ bool_t linphone_core_agc_enabled(const LinphoneCore *lc);
 
 /**
  * @deprecated Use #linphone_core_enable_mic instead.
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_mute_mic(LinphoneCore *lc, bool_t muted);
 
 /**
  * Get mic state.
  * @deprecated Use #linphone_core_mic_enabled instead
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED bool_t linphone_core_is_mic_muted(LinphoneCore *lc);
 
@@ -3185,6 +3211,7 @@ LINPHONE_PUBLIC bool_t linphone_core_video_supported(LinphoneCore *lc);
  * @param display_enabled indicates whether video display should be shown
  * @ingroup media_parameters
  * @deprecated Use #linphone_core_enable_video_capture and #linphone_core_enable_video_display instead.
+ * @donotwrap
 **/
 LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_enable_video(LinphoneCore *lc, bool_t vcap_enabled, bool_t display_enabled);
 
@@ -3747,6 +3774,7 @@ LINPHONE_PUBLIC LinphoneConfig * linphone_core_get_config(LinphoneCore *lc);
  * @param[in] filename The filename of the config file to read to fill the instantiated LpConfig
  * @ingroup misc
  * @deprecated Use linphone_core_create_config() instead.
+ * @donotwrap
  */
 LINPHONE_DEPRECATED LINPHONE_PUBLIC LinphoneConfig * linphone_core_create_lp_config(LinphoneCore *lc, const char *filename);
 
@@ -3773,6 +3801,7 @@ LINPHONE_PUBLIC const bctbx_list_t * linphone_core_get_sip_setups(LinphoneCore *
  * @param[in] lc LinphoneCore object
  * @ingroup initializing
  * @deprecated Use linphone_core_unref() instead.
+ * @donotwrap
 **/
 LINPHONE_DEPRECATED LINPHONE_PUBLIC void linphone_core_destroy(LinphoneCore *lc);
 
@@ -4159,6 +4188,23 @@ LINPHONE_PUBLIC const char *linphone_core_get_video_display_filter(LinphoneCore 
  * @ingroup media_parameters
 **/
 LINPHONE_PUBLIC void linphone_core_set_video_display_filter(LinphoneCore *lc, const char *filtername);
+
+/**
+ * Get the name of the mediastreamer2 filter used for echo cancelling.
+ * @param[in] lc LinphoneCore object
+ * @return The name of the mediastreamer2 filter used for echo cancelling
+ * @ingroup media_parameters
+ */
+LINPHONE_PUBLIC const char * linphone_core_get_echo_canceller_filter_name(const LinphoneCore *lc);
+
+/**
+ * Set the name of the mediastreamer2 filter to be used for echo cancelling.
+ * This is for advanced users of the library.
+ * @param[in] lc LinphoneCore object
+ * @param[in] filtername The name of the mediastreamer2 filter to be used for echo cancelling
+ * @ingroup media_parameters
+ */
+LINPHONE_PUBLIC void linphone_core_set_echo_canceller_filter_name(LinphoneCore *lc, const char *filtername);
 
 /** Contact Providers
   */
@@ -4803,8 +4849,9 @@ LINPHONE_PUBLIC LinphoneFriend * linphone_core_create_friend_with_address(Linpho
  * @param[in] alternative_contact sip uri used to redirect call in state #LinphoneStatusMoved
  * @param[in] os #LinphoneOnlineStatus
  * @deprecated Use linphone_core_set_presence_model() instead
+ * @donotwrap
  */
-LINPHONE_PUBLIC void linphone_core_set_presence_info(LinphoneCore *lc,int minutes_away,const char *alternative_contact,LinphoneOnlineStatus os);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_set_presence_info(LinphoneCore *lc,int minutes_away,const char *alternative_contact,LinphoneOnlineStatus os);
 
 /**
  * Set my presence model
@@ -4818,8 +4865,9 @@ LINPHONE_PUBLIC void linphone_core_set_presence_model(LinphoneCore *lc, Linphone
  * @param[in] lc #LinphoneCore object
  * @return #LinphoneOnlineStatus
  * @deprecated Use linphone_core_get_presence_model() instead
+ * @donotwrap
  */
-LINPHONE_PUBLIC LinphoneOnlineStatus linphone_core_get_presence_info(const LinphoneCore *lc);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED LinphoneOnlineStatus linphone_core_get_presence_info(const LinphoneCore *lc);
 
 /**
  * Get my presence model
@@ -4844,8 +4892,9 @@ LINPHONE_PUBLIC void linphone_core_set_consolidated_presence(LinphoneCore *lc, L
 
 /**
  * @deprecated Use linphone_core_interpret_url() instead
+ * @donotwrap
  */
-LINPHONE_PUBLIC void linphone_core_interpret_friend_uri(LinphoneCore *lc, const char *uri, char **result);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_interpret_friend_uri(LinphoneCore *lc, const char *uri, char **result);
 
 /**
  * Add a friend to the current buddy list, if \link linphone_friend_enable_subscribes() subscription attribute \endlink is set, a SIP SUBSCRIBE message is sent.
@@ -4860,8 +4909,9 @@ LINPHONE_PUBLIC	void linphone_core_add_friend(LinphoneCore *lc, LinphoneFriend *
  * @param lc #LinphoneCore object
  * @param fr #LinphoneFriend to remove
  * @deprecated use linphone_friend_list_remove_friend() instead.
+ * @donotwrap
  */
-LINPHONE_PUBLIC void linphone_core_remove_friend(LinphoneCore *lc, LinphoneFriend *fr);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED void linphone_core_remove_friend(LinphoneCore *lc, LinphoneFriend *fr);
 
 /**
  * Black list a friend. same as linphone_friend_set_inc_subscribe_policy() with #LinphoneSPDeny policy;
@@ -4875,8 +4925,9 @@ LINPHONE_PUBLIC void linphone_core_reject_subscriber(LinphoneCore *lc, LinphoneF
  * @param[in] lc #LinphoneCore object
  * @return \bctbx_list{LinphoneFriend}
  * @deprecated use linphone_core_get_friends_lists() or linphone_friend_list_get_friends() instead.
+ * @donotwrap
  */
-LINPHONE_PUBLIC	const bctbx_list_t * linphone_core_get_friend_list(const LinphoneCore *lc);
+LINPHONE_PUBLIC	LINPHONE_DEPRECATED  const bctbx_list_t * linphone_core_get_friend_list(const LinphoneCore *lc);
 
 /**
  * Notify all friends that have subscribed
@@ -4891,8 +4942,9 @@ LINPHONE_PUBLIC void linphone_core_notify_all_friends(LinphoneCore *lc, Linphone
  * @param[in] addr The address to use to search the friend.
  * @return The #LinphoneFriend object corresponding to the given address.
  * @deprecated use linphone_core_find_friend() instead.
+ * @donotwrap
  */
-LINPHONE_PUBLIC LinphoneFriend *linphone_core_get_friend_by_address(const LinphoneCore *lc, const char *addr);
+LINPHONE_PUBLIC LINPHONE_DEPRECATED LinphoneFriend *linphone_core_get_friend_by_address(const LinphoneCore *lc, const char *addr);
 
 /**
  * Search a LinphoneFriend by its address.
