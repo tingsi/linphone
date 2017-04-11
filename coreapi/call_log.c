@@ -38,90 +38,91 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #endif
 
 typedef struct _CallLogStorageResult {
-	LinphoneCore *core;
-	bctbx_list_t *result;
+LinphoneCore *core;
+bctbx_list_t *result;
 } CallLogStorageResult;
 
 /*******************************************************************************
- * Internal functions                                                          *
- ******************************************************************************/
+* Internal functions                                                          *
+******************************************************************************/
 
 /*prevent a gcc bug with %c*/
 static size_t my_strftime(char *s, size_t max, const char  *fmt,  const struct tm *tm){
-	return strftime(s, max, fmt, tm);
+return strftime(s, max, fmt, tm);
 }
 
 static time_t string_to_time(const char *date){
 #ifndef _WIN32
-	struct tm tmtime={0};
-	strptime(date,"%c",&tmtime);
-	return mktime(&tmtime);
+struct tm tmtime={0};
+strptime(date,"%c",&tmtime);
+return mktime(&tmtime);
 #else
-	return 0;
+return 0;
 #endif
 }
 
 static void set_call_log_date(LinphoneCallLog *cl, time_t start_time){
-	struct tm loctime;
+struct tm loctime;
 #ifdef _WIN32
 #if !defined(_WIN32_WCE)
-	loctime=*localtime(&start_time);
-	/*FIXME*/
+loctime=*localtime(&start_time);
+/*FIXME*/
 #endif /*_WIN32_WCE*/
 #else
-	localtime_r(&start_time,&loctime);
+localtime_r(&start_time,&loctime);
 #endif
-	my_strftime(cl->start_date,sizeof(cl->start_date),"%c",&loctime);
+my_strftime(cl->start_date,sizeof(cl->start_date),"%c",&loctime);
 }
 
 /*******************************************************************************
- * Private functions                                                           *
- ******************************************************************************/
+* Private functions                                                           *
+******************************************************************************/
 
 void call_logs_write_to_config_file(LinphoneCore *lc){
-	bctbx_list_t *elem;
-	char logsection[32];
-	int i;
-	char *tmp;
-	LpConfig *cfg=lc->config;
+bctbx_list_t *elem;
+char logsection[32];
+int i;
+char *tmp;
+LpConfig *cfg=lc->config;
 
-	if (linphone_core_get_global_state (lc)==LinphoneGlobalStartup) return;
-	
-	if (lc->max_call_logs == LINPHONE_MAX_CALL_HISTORY_UNLIMITED) return;
+if (linphone_core_get_global_state (lc)==LinphoneGlobalStartup) return;
 
-	for(i=0,elem=lc->call_logs;elem!=NULL;elem=elem->next,++i){
-		LinphoneCallLog *cl=(LinphoneCallLog*)elem->data;
-		snprintf(logsection,sizeof(logsection),"call_log_%i",i);
-		lp_config_clean_section(cfg,logsection);
-		lp_config_set_int(cfg,logsection,"dir",cl->dir);
-		lp_config_set_int(cfg,logsection,"status",cl->status);
-		tmp=linphone_address_as_string(cl->from);
-		lp_config_set_string(cfg,logsection,"from",tmp);
-		ms_free(tmp);
-		tmp=linphone_address_as_string(cl->to);
-		lp_config_set_string(cfg,logsection,"to",tmp);
-		ms_free(tmp);
-		if (cl->start_date_time)
-			lp_config_set_int64(cfg,logsection,"start_date_time",(int64_t)cl->start_date_time);
-		else lp_config_set_string(cfg,logsection,"start_date",cl->start_date);
-		lp_config_set_int(cfg,logsection,"duration",cl->duration);
-		if (cl->refkey) lp_config_set_string(cfg,logsection,"refkey",cl->refkey);
-		lp_config_set_float(cfg,logsection,"quality",cl->quality);
-		lp_config_set_int(cfg,logsection,"video_enabled", cl->video_enabled);
-		lp_config_set_string(cfg,logsection,"call_id",cl->call_id);
-	}
-	for(;i<lc->max_call_logs;++i){
-		snprintf(logsection,sizeof(logsection),"call_log_%i",i);
-		lp_config_clean_section(cfg,logsection);
-	}
+if (lc->max_call_logs == LINPHONE_MAX_CALL_HISTORY_UNLIMITED) return;
+
+for(i=0,elem=lc->call_logs;elem!=NULL;elem=elem->next,++i){
+    LinphoneCallLog *cl=(LinphoneCallLog*)elem->data;
+    snprintf(logsection,sizeof(logsection),"call_log_%i",i);
+    lp_config_clean_section(cfg,logsection);
+    lp_config_set_int(cfg,logsection,"dir",cl->dir);
+    lp_config_set_int(cfg,logsection,"status",cl->status);
+    tmp=linphone_address_as_string(cl->from);
+    lp_config_set_string(cfg,logsection,"from",tmp);
+    ms_free(tmp);
+    tmp=linphone_address_as_string(cl->to);
+    lp_config_set_string(cfg,logsection,"to",tmp);
+    ms_free(tmp);
+    if (cl->start_date_time)
+        lp_config_set_int64(cfg,logsection,"start_date_time",(int64_t)cl->start_date_time);
+    else lp_config_set_string(cfg,logsection,"start_date",cl->start_date);
+    lp_config_set_int(cfg,logsection,"duration",cl->duration);
+    if (cl->refkey) lp_config_set_string(cfg,logsection,"refkey",cl->refkey);
+    lp_config_set_float(cfg,logsection,"quality",cl->quality);
+    lp_config_set_int(cfg,logsection,"video_enabled", cl->video_enabled);
+    lp_config_set_string(cfg,logsection,"call_id",cl->call_id);
+}
+for(;i<lc->max_call_logs;++i){
+    snprintf(logsection,sizeof(logsection),"call_log_%i",i);
+    lp_config_clean_section(cfg,logsection);
+}
 }
 
 void call_logs_read_from_config_file(LinphoneCore *lc){
-	char logsection[32];
-	int i;
-	const char *tmp;
-	uint64_t sec;
-	LpConfig *cfg=lc->config;
+char logsection[32];
+int i;
+const char *tmp;
+uint64_t sec;
+LpConfig *cfg=lc->config;
+	bctbx_list_t *call_logs = NULL;
 	for(i=0;;++i){
 		snprintf(logsection,sizeof(logsection),"call_log_%i",i);
 		if (lp_config_has_section(cfg,logsection)){
