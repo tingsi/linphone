@@ -77,8 +77,8 @@ class CppTranslator(object):
 	def __init__(self):
 		self.ignore = []
 		self.ambigousTypes = ['LinphonePayloadType']
-		self.docTranslator = metadoc.DoxygenCppTranslator()
 		self.nameTranslator = NameTranslator()
+		self.docTranslator = metadoc.DoxygenCppTranslator(self.nameTranslator)
 	
 	def is_ambigous_type(self, _type):
 		return _type.name in self.ambigousTypes or (_type.name == 'list' and self.is_ambigous_type(_type.containedTypeDesc))

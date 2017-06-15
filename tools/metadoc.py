@@ -173,15 +173,19 @@ class ReferenceTranslationError(RuntimeError):
 
 
 class DoxygenCppTranslator(Translator):
+	def __init__(self, nameTranslator):
+		Translator.__init__(self)
+		self.nameTranslator = nameTranslator
+	
 	def _tag_as_brief(self, lines):
 		if len(lines) > 0:
 			lines[0] = '@brief ' + lines[0]
 	
 	def _translate_reference(self, ref):
 		if isinstance(ref.relatedObject, (abstractapi.Class, abstractapi.Enum)):
-			return '#' + ref.relatedObject.name.to_c()
+			return '#' + ref.relatedObject.name.translate(self.nameTranslator, recursive=True)
 		elif isinstance(ref.relatedObject, abstractapi.Method):
-			return ref.relatedObject.name.to_c() + '()'
+			return ref.relatedObject.name.translate(self.nameTranslator, recursive=True) + '()'
 		else:
 			raise ReferenceTranslationError(ref.cname)
 
