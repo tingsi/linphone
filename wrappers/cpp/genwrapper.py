@@ -29,6 +29,48 @@ import abstractapi as AbsApi
 import metadoc
 
 
+class NameTranslator:
+	def translate_class_name(self, name, recursive=False, topAncestor=None):
+		if name.prev is None or not recursive or name.prev is topAncestor:
+			return name.to_camel_case()
+		else:
+			params = {'recursive': recursive, 'topAncestor': topAncestor}
+			return name.prev.translate(self, **params) + '::' + name.to_camel_case()
+	
+	def translate_interface_name(self, name, **params):
+		return self.translate_class_name(name, **params)
+	
+	def translate_enum_name(self, name, **params):
+		return self.translate_class_name(name, **params)
+	
+	def translate_enum_value_name(self, name, **params):
+		return self.translate_enum_name(name.prev, **params) + name.to_camel_case()
+	
+	def translate_method_name(self, name, recursive=False, topAncestor=None):
+		translatedName = name.to_camel_case(lower=True)
+		if translatedName == 'new':
+			translatedName = '_new'
+		
+		if name.prev is None or not recursive or name.prev is topAncestor:
+			return translatedName
+		else:
+			params = {'recursive': recursive, 'topAncestor': topAncestor}
+			return name.prev.translate(self, **params) + '::' + translatedName
+	
+	def translate_namespace_name(self, name, recursive=False, topAncestor=None):
+		if name.prev is None or not recursive or name.prev is topAncestor:
+			return name.concatenate()
+		else:
+			params = {'recursive': recursive, 'topAncestor': topAncestor}
+			return name.prev.translate(self, **params) + '::' + name.concatenate()
+	
+	def translate_argument_name(self, name):
+		return name.to_camel_case(lower=True)
+	
+	def translate_property_name(self, name):
+		return self.translate_argument_name(name)
+
+
 class CppTranslator(object):
 	sharedPtrTypeExtractor = re.compile('^(const )?std::shared_ptr<(.+)>( &)?$')
 	
@@ -36,6 +78,7 @@ class CppTranslator(object):
 		self.ignore = []
 		self.ambigousTypes = ['LinphonePayloadType']
 		self.docTranslator = metadoc.DoxygenCppTranslator()
+		self.nameTranslator = NameTranslator()
 	
 	def is_ambigous_type(self, _type):
 		return _type.name in self.ambigousTypes or (_type.name == 'list' and self.is_ambigous_type(_type.containedTypeDesc))
@@ -55,7 +98,7 @@ class CppTranslator(object):
 	
 	def translate_enum_value(self, enumValue):
 		enumValueDict = {}
-		enumValueDict['name'] = CppTranslator.translate_enum_value_name(enumValue.name)
+		enumValueDict['name'] = enumValue.name.translate(self.nameTranslator)
 		enumValueDict['doc'] = self.docTranslator.translate(enumValue.briefDescription)
 		if type(enumValue.value) is int:
 			enumValueDict['value'] = str(enumValue.value)
@@ -83,7 +126,7 @@ class CppTranslator(object):
 			'isNotListener'       : True,
 			'isfactory'           : (_class.name.to_c() == 'LinphoneFactory'),
 			'isVcard'             : (_class.name.to_c() == 'LinphoneVcard'),
-			'className'           : CppTranslator.translate_class_name(_class.name),
+			'className'           : _class.name.translate(self.nameTranslator),
 			'cClassName'          : '::' + _class.name.to_c(),
 			'privCClassName'      : '_' + _class.name.to_c(),
 			'parentClassName'     : 'Object' if _class.refcountable else None,
@@ -99,9 +142,9 @@ class CppTranslator(object):
 		classDict['doc'] = self.docTranslator.translate(_class.briefDescription)
 		
 		if islistenable:
-			classDict['listenerClassName'] = CppTranslator.translate_class_name(_class.listenerInterface.name)
+			classDict['listenerClassName'] = _class.listenerInterface.name.translate(self.nameTranslator)
 			classDict['cListenerName'] = _class.listenerInterface.name.to_c()
-			classDict['cppListenerName'] = CppTranslator.translate_class_name(_class.listenerInterface.name)
+			classDict['cppListenerName'] = _class.listenerInterface.name.translate(self.nameTranslator)
 			for method in _class.listenerInterface.methods:
 				classDict['wrapperCbs'].append(self._generate_wrapper_callback(_class, method))
 		
@@ -173,7 +216,7 @@ class CppTranslator(object):
 		
 		intDict = {}
 		intDict['inheritFrom'] = {'name': 'Listener'}
-		intDict['className'] = CppTranslator.translate_class_name(interface.name)
+		intDict['className'] = interface.name.translate(self.nameTranslator)
 		intDict['constructor'] = None
 		intDict['parentClassName'] = 'Listener'
 		intDict['isNotListener'] = False
@@ -203,7 +246,7 @@ class CppTranslator(object):
 		
 		methodElems = {}
 		methodElems['return'] = self.translate_type(method.returnType)
-		methodElems['name'] = CppTranslator.translate_method_name(method.name)
+		methodElems['name'] = method.name.translate(self.nameTranslator)
 		
 		methodElems['params'] = ''
 		for arg in method.args:
@@ -235,7 +278,7 @@ class CppTranslator(object):
 			else:
 				methodElems['implReturn'] = self.translate_type(method.returnType, namespace=None)
 			
-			methodElems['longname'] = CppTranslator.translate_method_name(method.name, recursive=True)
+			methodElems['longname'] = method.name.translate(self.nameTranslator, recursive=True)
 			methodElems['implParams'] = ''
 			for arg in method.args:
 				if arg is not method.args[0]:
@@ -371,7 +414,7 @@ class CppTranslator(object):
 			return cExpr
 	
 	def translate_argument(self, arg, **params):
-		return '{0} {1}'.format(self.translate_type(arg.type, **params), CppTranslator.translate_argument_name(arg.name))
+		return '{0} {1}'.format(self.translate_type(arg.type, **params), arg.name.translate(self.nameTranslator))
 	
 	def translate_type(self, aType, **params):
 		if type(aType) is AbsApi.BaseType:
@@ -452,7 +495,7 @@ class CppTranslator(object):
 			method = _type.find_first_ancestor_by_type(AbsApi.Method)
 			nsName = AbsApi.Name.find_common_parent(_type.desc.name, method.name)
 		
-		return CppTranslator.translate_enum_name(_type.desc.name, recursive=True, topAncestor=nsName)
+		return _type.desc.name.translate(self.nameTranslator, recursive=True, topAncestor=nsName)
 	
 	def translate_class_type(self, _type, **params):
 		if _type.name in self.ignore:
@@ -467,7 +510,7 @@ class CppTranslator(object):
 			method = _type.find_first_ancestor_by_type(AbsApi.Method)
 			nsName = AbsApi.Name.find_common_parent(_type.desc.name, method.name)
 		
-		res = CppTranslator.translate_class_name(_type.desc.name, recursive=True, topAncestor=nsName)
+		res = _type.desc.name.translate(self.nameTranslator, recursive=True, topAncestor=nsName)
 		
 		if _type.desc.refcountable:
 			if _type.isconst:
@@ -494,73 +537,6 @@ class CppTranslator(object):
 			return 'const std::list<{0} > &'.format(res)
 		else:
 			return 'std::list<{0} >'.format(res)
-	
-	@staticmethod
-	def translate_name(aName, **params):
-		if type(aName) is AbsApi.ClassName:
-			return CppTranslator.translate_class_name(aName, **params)
-		elif type(aName) is AbsApi.InterfaceName:
-			return CppTranslator.translate_class_name(aName, **params)
-		elif type(aName) is AbsApi.EnumName:
-			return CppTranslator.translate_enum_name(aName, **params)
-		elif type(aName) is AbsApi.EnumValueName:
-			return CppTranslator.translate_enum_value_name(aName, **params)
-		elif type(aName) is AbsApi.MethodName:
-			return CppTranslator.translate_method_name(aName, **params)
-		elif type(aName) is AbsApi.ArgName:
-			return CppTranslator.translate_argument_name(aName, **params)
-		elif type(aName) is AbsApi.NamespaceName:
-			return CppTranslator.translate_namespace_name(aName, **params)
-		elif type(aName) is AbsApi.PropertyName:
-			return CppTranslator.translate_property_name(aName, **params)
-		else:
-			CppTranslator.fail(aName)
-	
-	@staticmethod
-	def translate_class_name(name, recursive=False, topAncestor=None):
-		if name.prev is None or not recursive or name.prev is topAncestor:
-			return name.to_camel_case()
-		else:
-			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return CppTranslator.translate_name(name.prev, **params) + '::' + name.to_camel_case()
-	
-	@staticmethod
-	def translate_enum_name(name, recursive=False, topAncestor=None):
-		params = {'recursive': recursive, 'topAncestor': topAncestor}
-		return CppTranslator.translate_class_name(name, **params)
-	
-	@staticmethod
-	def translate_enum_value_name(name, recursive=False, topAncestor=None):
-		params = {'recursive': recursive, 'topAncestor': topAncestor}
-		return CppTranslator.translate_enum_name(name.prev, **params) + name.to_camel_case()
-	
-	@staticmethod
-	def translate_method_name(name, recursive=False, topAncestor=None):
-		translatedName = name.to_camel_case(lower=True)
-		if translatedName == 'new':
-			translatedName = '_new'
-			
-		if name.prev is None or not recursive or name.prev is topAncestor:
-			return translatedName
-		else:
-			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return CppTranslator.translate_name(name.prev, **params) + '::' + translatedName
-	
-	@staticmethod
-	def translate_namespace_name(name, recursive=False, topAncestor=None):
-		if name.prev is None or not recursive or name.prev is topAncestor:
-			return name.concatenate()
-		else:
-			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return CppTranslator.translate_namespace_name(name.prev, **params) + '::' + name.concatenate()
-	
-	@staticmethod
-	def translate_argument_name(name):
-		return name.to_camel_case(lower=True)
-	
-	@staticmethod
-	def translate_property_name(name):
-		CppTranslator.translate_argument_name(name)
 	
 	@staticmethod
 	def fail(obj):

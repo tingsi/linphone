@@ -143,19 +143,27 @@ class Name(object):
 class ClassName(Name):
 	def to_c(self):
 		return Name.to_camel_case(self, fullName=True)
+	
+	def translate(self, translator, **params):
+		return translator.translate_class_name(self, **params)
 
 
 class InterfaceName(ClassName):
 	def to_c(self):
 		return ClassName.to_c(self)[:-8] + 'Cbs'
+	
+	def translate(self, translator, **params):
+		return translator.translate_interface_name(self, **params)
 
 
 class EnumName(ClassName):
-	pass
+	def translate(self, translator, **params):
+		return translator.translate_enum_name(self, **params)
 
 
 class EnumValueName(ClassName):
-	pass
+	def translate(self, translator, **params):
+		return translator.translate_enum_value_name(self, **params)
 
 
 class MethodName(Name):
@@ -175,15 +183,22 @@ class MethodName(Name):
 	def to_c(self):
 		suffix = ('_' + str(self.overloadRef)) if self.overloadRef > 0 else ''
 		return self.to_snake_case(fullName=True) + suffix
+	
+	def translate(self, translator, **params):
+		return translator.translate_method_name(self, **params)
 
 
 class ArgName(Name):
 	def to_c(self):
 		return self.to_snake_case()
+	
+	def translate(self, translator, **params):
+		return translator.translate_argument_name(self, **params)
 
 
 class PropertyName(ArgName):
-	pass
+	def translate(self, translator, **params):
+		return translator.translate_property_name(self, **params)
 
 
 class NamespaceName(Name):
@@ -191,6 +206,9 @@ class NamespaceName(Name):
 		Name.__init__(self)
 		if len(params) > 0:
 			self.words = params[0]
+	
+	def translate(self, translator, **params):
+		return translator.translate_namespace_name(self, **params)
 
 
 class Object(object):
