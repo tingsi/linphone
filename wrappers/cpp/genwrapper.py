@@ -23,52 +23,12 @@ import argparse
 import os
 import sys
 import errno
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
 import genapixml as CApi
 import abstractapi as AbsApi
 import metadoc
-
-
-class NameTranslator:
-	def translate_class_name(self, name, recursive=False, topAncestor=None):
-		if name.prev is None or not recursive or name.prev is topAncestor:
-			return name.to_camel_case()
-		else:
-			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return name.prev.translate(self, **params) + '::' + name.to_camel_case()
-	
-	def translate_interface_name(self, name, **params):
-		return self.translate_class_name(name, **params)
-	
-	def translate_enum_name(self, name, **params):
-		return self.translate_class_name(name, **params)
-	
-	def translate_enum_value_name(self, name, **params):
-		return self.translate_enum_name(name.prev, **params) + name.to_camel_case()
-	
-	def translate_method_name(self, name, recursive=False, topAncestor=None):
-		translatedName = name.to_camel_case(lower=True)
-		if translatedName == 'new':
-			translatedName = '_new'
-		
-		if name.prev is None or not recursive or name.prev is topAncestor:
-			return translatedName
-		else:
-			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return name.prev.translate(self, **params) + '::' + translatedName
-	
-	def translate_namespace_name(self, name, recursive=False, topAncestor=None):
-		if name.prev is None or not recursive or name.prev is topAncestor:
-			return name.concatenate()
-		else:
-			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return name.prev.translate(self, **params) + '::' + name.concatenate()
-	
-	def translate_argument_name(self, name):
-		return name.to_camel_case(lower=True)
-	
-	def translate_property_name(self, name):
-		return self.translate_argument_name(name)
+import metaname
 
 
 class CppTranslator(object):
@@ -77,7 +37,7 @@ class CppTranslator(object):
 	def __init__(self):
 		self.ignore = []
 		self.ambigousTypes = ['LinphonePayloadType']
-		self.nameTranslator = NameTranslator()
+		self.nameTranslator = metaname.CppTranslator()
 		self.docTranslator = metadoc.DoxygenCppTranslator(self.nameTranslator)
 	
 	def is_ambigous_type(self, _type):
@@ -493,7 +453,7 @@ class CppTranslator(object):
 			nsName = params['namespace'].name if params['namespace'] is not None else None
 		else:
 			method = _type.find_first_ancestor_by_type(AbsApi.Method)
-			nsName = AbsApi.Name.find_common_parent(_type.desc.name, method.name)
+			nsName = metaname.Name.find_common_parent(_type.desc.name, method.name)
 		
 		return _type.desc.name.translate(self.nameTranslator, recursive=True, topAncestor=nsName)
 	
@@ -508,7 +468,7 @@ class CppTranslator(object):
 			nsName = params['namespace'].name if params['namespace'] is not None else None
 		else:
 			method = _type.find_first_ancestor_by_type(AbsApi.Method)
-			nsName = AbsApi.Name.find_common_parent(_type.desc.name, method.name)
+			nsName = metaname.Name.find_common_parent(_type.desc.name, method.name)
 		
 		res = _type.desc.name.translate(self.nameTranslator, recursive=True, topAncestor=nsName)
 		
@@ -571,7 +531,7 @@ class ClassHeader(object):
 				if include == 'enums':
 					self.includes['internal'].append({'name': include})
 				else:
-					className = AbsApi.ClassName()
+					className = metaname.ClassName()
 					className.from_snake_case(include)
 					self.priorDeclarations.append({'name': className.to_camel_case()})
 			else:

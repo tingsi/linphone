@@ -17,6 +17,7 @@
 
 import re
 import genapixml as CApi
+import metaname
 
 
 class Error(RuntimeError):
@@ -25,190 +26,6 @@ class Error(RuntimeError):
 
 class BlacklistedException(Error):
 	pass
-
-
-class Name(object):
-	camelCaseParsingRegex = re.compile('[A-Z][a-z0-9]*')
-	lowerCamelCaseSplitingRegex = re.compile('([a-z][a-z0-9]*)([A-Z][a-z0-9]*)')
-	
-	def __init__(self):
-		self.words = []
-		self.prev = None
-	
-	def copy(self):
-		nameType = type(self)
-		name = nameType()
-		name.words = list(self.words)
-		name.prev = None if self.prev is None else self.prev.copy()
-		return name
-	
-	def delete_prefix(self, prefix):
-		it = self
-		_next = None
-		while it is not None and it.words != prefix.words:
-			_next = it
-			it = it.prev
-		
-		if it is None or it != prefix:
-			raise Error('no common prefix')
-		elif _next is not None:
-			_next.prev = None
-	
-	def _set_namespace(self, namespace):
-		self.prev = namespace
-		if self.prev is not None:
-			prefix = namespace.to_word_list()
-			i = 0
-			while i<len(self.words) and i<len(prefix) and self.words[i] == prefix[i]:
-				i += 1
-			if i == len(self.words):
-				raise Error('name equal to namespace \'{0}\'', self.words)
-			else:
-				self.words = self.words[i:]
-	
-	def _lower_all_words(self):
-		i = 0
-		while i<len(self.words):
-			self.words[i] = self.words[i].lower()
-			i += 1
-	
-	def from_snake_case(self, name, namespace=None):
-		self.words = name.split('_')
-		Name._set_namespace(self, namespace)
-	
-	def from_camel_case(self, name, islowercased=False, namespace=None):
-		if not islowercased:
-			self.words = Name.camelCaseParsingRegex.findall(name)
-		else:
-			match = Name.lowerCamelCaseSplitingRegex.match(name)
-			self.words = [match.group(1)]
-			self.words += Name.camelCaseParsingRegex.findall(match.group(2))
-		
-		Name._lower_all_words(self)
-		Name._set_namespace(self, namespace)
-	
-	def to_snake_case(self, fullName=False, upper=False):
-		if self.prev is None or not fullName:
-			res = '_'.join(self.words)
-			if upper:
-				res = res.upper()
-			return res
-		else:
-			return Name.to_snake_case(self.prev, fullName=True, upper=upper) + '_' + Name.to_snake_case(self, upper=upper)
-	
-	def to_camel_case(self, lower=False, fullName=False):
-		if self.prev is None or not fullName:
-			res = ''
-			for elem in self.words:
-				if elem is self.words[0] and lower:
-					res += elem
-				else:
-					res += elem.title()
-			return res
-		else:
-			return Name.to_camel_case(self.prev, fullName=True, lower=lower) + Name.to_camel_case(self)
-	
-	def concatenate(self, upper=False, fullName=False):
-		if self.prev is None or not fullName:
-			res = ''
-			for elem in self.words:
-				if upper:
-					res += elem.upper()
-				else:
-					res += elem
-			return res
-		else:
-			return Name.concatenate(self.prev, upper=upper, fullName=True) + Name.concatenate(self, upper=upper)
-	
-	def to_word_list(self):
-		if self.prev is None:
-			return list(self.words)
-		else:
-			return Name.to_word_list(self.prev) + self.words
-	
-	@staticmethod
-	def find_common_parent(name1, name2):
-		if name1.prev is None or name2.prev is None:
-			return None
-		elif name1.prev is name2.prev:
-			return name1.prev
-		else:
-			commonParent = Name.find_common_parent(name1.prev, name2)
-			if commonParent is not None:
-				return commonParent
-			else:
-				return Name.find_common_parent(name1, name2.prev)
-
-
-class ClassName(Name):
-	def to_c(self):
-		return Name.to_camel_case(self, fullName=True)
-	
-	def translate(self, translator, **params):
-		return translator.translate_class_name(self, **params)
-
-
-class InterfaceName(ClassName):
-	def to_c(self):
-		return ClassName.to_c(self)[:-8] + 'Cbs'
-	
-	def translate(self, translator, **params):
-		return translator.translate_interface_name(self, **params)
-
-
-class EnumName(ClassName):
-	def translate(self, translator, **params):
-		return translator.translate_enum_name(self, **params)
-
-
-class EnumValueName(ClassName):
-	def translate(self, translator, **params):
-		return translator.translate_enum_value_name(self, **params)
-
-
-class MethodName(Name):
-	regex = re.compile('^\d+$')
-	
-	def __init__(self):
-		self.overloadRef = 0
-	
-	def from_snake_case(self, name, namespace=None):
-		Name.from_snake_case(self, name, namespace=namespace)
-		if len(self.words) > 0:
-			suffix = self.words[-1]
-			if MethodName.regex.match(suffix) is not None:
-				self.overloadRef = int(suffix)
-				del self.words[-1]
-	
-	def to_c(self):
-		suffix = ('_' + str(self.overloadRef)) if self.overloadRef > 0 else ''
-		return self.to_snake_case(fullName=True) + suffix
-	
-	def translate(self, translator, **params):
-		return translator.translate_method_name(self, **params)
-
-
-class ArgName(Name):
-	def to_c(self):
-		return self.to_snake_case()
-	
-	def translate(self, translator, **params):
-		return translator.translate_argument_name(self, **params)
-
-
-class PropertyName(ArgName):
-	def translate(self, translator, **params):
-		return translator.translate_property_name(self, **params)
-
-
-class NamespaceName(Name):
-	def __init__(self, *params):
-		Name.__init__(self)
-		if len(params) > 0:
-			self.words = params[0]
-	
-	def translate(self, translator, **params):
-		return translator.translate_namespace_name(self, **params)
 
 
 class Object(object):
@@ -334,7 +151,7 @@ class Enum(DocumentableObject):
 		else:
 			name = cEnum.name
 		
-		self.name = EnumName()
+		self.name = metaname.EnumName()
 		self.name.prev = None if namespace is None else namespace.name
 		self.name.set_from_c(name)
 		
@@ -510,15 +327,15 @@ class CParser(object):
 				if _property.getter is not None:
 					self.methodsIndex[_property.getter.name] = None
 		
-		name = NamespaceName()
+		name = metaname.NamespaceName()
 		name.from_snake_case('linphone')
 		
 		self.namespace = Namespace(name)
 	
 	def _is_blacklisted(self, name):
-		if type(name) is MethodName:
+		if type(name) is metaname.MethodName:
 			return name.to_camel_case(lower=True) in self.methodBl or name.to_c() in self.functionBl
-		elif type(name) is ClassName:
+		elif type(name) is metaname.ClassName:
 			return name.to_c() in self.classBl
 		else:
 			return False
@@ -635,14 +452,14 @@ class CParser(object):
 		else:
 			nameStr = cenum.name
 		
-		name = EnumName()
+		name = metaname.EnumName()
 		name.from_camel_case(nameStr, namespace=self.namespace.name)
 		enum = Enum(name)
 		enum.briefDescription = cenum.briefDoc
 		self.namespace.add_child(enum)
 		
 		for cEnumValue in cenum.values:
-			valueName = EnumValueName()
+			valueName = metaname.EnumValueName()
 			valueName.from_camel_case(cEnumValue.name, namespace=name)
 			aEnumValue = EnumValue(valueName)
 			aEnumValue.briefDescription = cEnumValue.briefDoc
@@ -670,7 +487,7 @@ class CParser(object):
 		return _class
 	
 	def _parse_class(self, cclass):
-		name = ClassName()
+		name = metaname.ClassName()
 		name.from_camel_case(cclass.name, namespace=self.namespace.name)
 		_class = Class(name)
 		_class.briefDescription = cclass.briefDoc
@@ -715,7 +532,7 @@ class CParser(object):
 		return _class
 	
 	def _parse_property(self, cproperty, namespace=None):
-		name = PropertyName()
+		name = metaname.PropertyName()
 		name.from_snake_case(cproperty.name)
 		if (cproperty.setter is not None and len(cproperty.setter.arguments) == 1) or (cproperty.getter is not None and len(cproperty.getter.arguments) == 0):
 			methodType = Method.Type.Class
@@ -732,7 +549,7 @@ class CParser(object):
 	
 	
 	def _parse_listener(self, cclass):
-		name = InterfaceName()
+		name = metaname.InterfaceName()
 		name.from_camel_case(cclass.name, namespace=self.namespace.name)
 		
 		if name.words[len(name.words)-1] == 'cbs':
@@ -754,7 +571,7 @@ class CParser(object):
 		return listener
 	
 	def _parse_listener_property(self, property, listener, events):
-		methodName = MethodName()
+		methodName = metaname.MethodName()
 		methodName.from_snake_case(property.name)
 		methodName.words.insert(0, 'on')
 		methodName.prev = listener.name
@@ -774,7 +591,7 @@ class CParser(object):
 		method = Method(methodName)
 		method.returnType = self.parse_type(event.returnArgument)
 		for arg in event.arguments:
-			argName = ArgName()
+			argName = metaname.ArgName()
 			argName.from_snake_case(arg.name)
 			argument = Argument(argName, self.parse_type(arg))
 			method.add_arguments(argument)
@@ -782,7 +599,7 @@ class CParser(object):
 		return method
 	
 	def parse_method(self, cfunction, namespace, type=Method.Type.Instance):
-		name = MethodName()
+		name = metaname.MethodName()
 		name.from_snake_case(cfunction.name, namespace=namespace)
 		
 		if self._is_blacklisted(name):
@@ -798,7 +615,7 @@ class CParser(object):
 				method.constMethod = ('const' in arg.completeType.split(' '))
 			else:
 				aType = self.parse_type(arg)
-				argName = ArgName()
+				argName = metaname.ArgName()
 				argName.from_snake_case(arg.name)
 				absArg = Argument(argName, aType)
 				method.add_arguments(absArg)
