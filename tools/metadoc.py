@@ -171,7 +171,7 @@ class ReferenceTranslationError(RuntimeError):
 	pass
 
 
-class DoxygenCppTranslator(Translator):
+class DoxygenTranslator(Translator):
 	def __init__(self, nameTranslator):
 		Translator.__init__(self)
 		self.nameTranslator = nameTranslator
