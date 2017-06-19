@@ -101,8 +101,9 @@ class Parser:
 
 
 class Translator:
-	def __init__(self):
+	def __init__(self, nameTranslator):
 		self.textWidth = 80
+		self.nameTranslator = nameTranslator
 	
 	def translate(self, description):
 		if description is None:
@@ -173,8 +174,7 @@ class ReferenceTranslationError(RuntimeError):
 
 class DoxygenTranslator(Translator):
 	def __init__(self, nameTranslator):
-		Translator.__init__(self)
-		self.nameTranslator = nameTranslator
+		Translator.__init__(self, nameTranslator)
 	
 	def _tag_as_brief(self, lines):
 		if len(lines) > 0:
@@ -190,6 +190,9 @@ class DoxygenTranslator(Translator):
 
 
 class SandcastleCSharpTranslator(Translator):
+	def __init__(self):
+		Translator.__init__(self, None)
+	
 	def _tag_as_brief(self, lines):
 		if len(lines) > 0:
 			lines.insert(0, '<summary>')
