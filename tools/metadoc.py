@@ -173,9 +173,6 @@ class ReferenceTranslationError(RuntimeError):
 
 
 class DoxygenTranslator(Translator):
-	def __init__(self, nameTranslator):
-		Translator.__init__(self, nameTranslator)
-	
 	def _tag_as_brief(self, lines):
 		if len(lines) > 0:
 			lines[0] = '@brief ' + lines[0]
@@ -187,6 +184,30 @@ class DoxygenTranslator(Translator):
 			return ref.relatedObject.name.translate(self.nameTranslator, recursive=True) + '()'
 		else:
 			raise ReferenceTranslationError(ref.cname)
+
+
+class SphinxTranslator(Translator):
+	def __init__(self, nameTranslator):
+		Translator.__init__(self, nameTranslator)
+		if isinstance(nameTranslator, metaname.CppTranslator):
+			self.sphinxNamespace = 'cpp'
+		else:
+			TypeError('not suppored name translator: ' + str(nameTranslator))
+	
+	def _translate_reference(self, ref):
+		return self._sphinx_ref_tag(ref) + ' ' + self.relatedObject.name.translate(self.nameTranslator)
+	
+	def _sphinx_ref_tag(self, ref):
+		if isinstance(ref.relatedObject, abstractapi.Class):
+			refType = 'class'
+		elif isinstance(ref.relatedObject, abstractapi.Enum):
+			refType = 'enum'
+		elif isinstance(ref.relatedObject, abstractapi.Method):
+			refType = 'function'
+		else:
+			refType = 'any'
+		
+		return '..{ns}:{type}::'.format(ns=self.sphinxNamespace, type=refType)
 
 
 class SandcastleCSharpTranslator(Translator):
