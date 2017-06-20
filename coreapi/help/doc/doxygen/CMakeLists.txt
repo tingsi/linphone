@@ -30,7 +30,8 @@ if (ENABLE_DOC OR ENABLE_CXX_WRAPPER OR ENABLE_CSHARP_WRAPPER)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.dox
                                 ${LINPHONE_HEADER_FILES}
                         )
-                        add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/html/index.html" "${CMAKE_CURRENT_BINARY_DIR}/xml/index.xml"
+                        set(LINPHONE_DOXYGEN_XML_DIR "${CMAKE_CURRENT_BINARY_DIR}/xml" PARENT_SCOPE)
+                        add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/html/index.html" "${LINPHONE_DOXYGEN_XML_DIR}/index.xml"
                                 COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
                                 DEPENDS ${DOC_INPUT_FILES}
                         )
