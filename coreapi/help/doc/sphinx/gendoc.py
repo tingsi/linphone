@@ -27,21 +27,33 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 import abstractapi
 import genapixml as capi
 import metaname
+import metadoc
 
 
 class RstTools:
 	@staticmethod
-	def make_section(text, char='=', overline=True):
+	def make_chapter(text):
+		return RstTools.make_section(text, char='*', overline=True)
+	
+	@staticmethod
+	def make_section(text, char='=', overline=False):
 		size = len(text)
 		underline = (char*size)
-		return '\n'.join([underline, text, underline])
+		lines = [text, underline]
+		if overline:
+			lines.insert(0, underline)
+		return '\n'.join(lines)
 
 
 class ClassPage(object):
 	def __init__(self, _class, language):
 		self._init_translation_info(language)
-		self.className = _class.name.translate(self.nameTranslator)
 		self.filename = '{0}_{1}.rst'.format(self.prefix, _class.name.to_snake_case(fullName=True))
+		self.className = _class.name.translate(self.nameTranslator)
+		self.classBrief = self.docTranslator.translate(_class.briefDescription)
+	
+	def make_chapter(self):
+		return lambda text: RstTools.make_chapter(pystache.render(text, self))
 	
 	def make_section(self):
 		return lambda text: RstTools.make_section(pystache.render(text, self))
@@ -56,6 +68,7 @@ class ClassPage(object):
 		if language.lower() == 'c++':
 			self.prefix = 'cpp'
 			self.nameTranslator = metaname.CppTranslator()
+			self.docTranslator = metadoc.SphinxTranslator(self.nameTranslator)
 		else:
 			raise ValueError(language)
 

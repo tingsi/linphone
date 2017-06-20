@@ -166,6 +166,9 @@ class Translator:
 		
 		lines.append(line)
 		return lines
+	
+	def _tag_as_brief(self, lines):
+		pass
 
 
 class ReferenceTranslationError(RuntimeError):
@@ -195,7 +198,10 @@ class SphinxTranslator(Translator):
 			TypeError('not suppored name translator: ' + str(nameTranslator))
 	
 	def _translate_reference(self, ref):
-		return self._sphinx_ref_tag(ref) + ' ' + self.relatedObject.name.translate(self.nameTranslator)
+		if ref.relatedObject is not None:
+			return self._sphinx_ref_tag(ref) + ' ' + ref.relatedObject.name.translate(self.nameTranslator)
+		else:
+			raise ReferenceTranslationError(ref.cname)
 	
 	def _sphinx_ref_tag(self, ref):
 		if isinstance(ref.relatedObject, abstractapi.Class):
