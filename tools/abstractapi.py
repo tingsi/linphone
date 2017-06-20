@@ -54,18 +54,27 @@ class BaseType(Type):
 		Type.__init__(self, name, isconst=isconst, isref=isref)
 		self.size = size
 		self.isUnsigned = isUnsigned
+	
+	def translate(self, translator, **params):
+		return translator.translate_base_type(self)
 
 
 class EnumType(Type):
 	def __init__(self, name, isconst=False, isref=False, enumDesc=None):
 		Type.__init__(self, name, isconst=isconst, isref=isref)
 		self.desc = enumDesc
+	
+	def translate(self, translator, **params):
+		return translator.translate_enum_type(self, **params)
 
 
 class ClassType(Type):
 	def __init__(self, name, isconst=False, isref=False, classDesc=None):
 		Type.__init__(self, name, isconst=isconst, isref=isref)
 		self.desc = classDesc
+	
+	def translate(self, translator, **params):
+		return translator.translate_class_type(self, **params)
 
 
 class ListType(Type):
@@ -74,14 +83,17 @@ class ListType(Type):
 		self.containedTypeName = containedTypeName
 		self._containedTypeDesc = None
 	
-	def set_contained_type_desc(self, desc):
+	def _set_contained_type_desc(self, desc):
 		self._containedTypeDesc = desc
 		desc.parent = self
 	
-	def get_contained_type_desc(self):
+	def _get_contained_type_desc(self):
 		return self._containedTypeDesc
 	
-	containedTypeDesc = property(fset=set_contained_type_desc, fget=get_contained_type_desc)
+	containedTypeDesc = property(fset=_set_contained_type_desc, fget=_get_contained_type_desc)
+	
+	def translate(self, translator, **params):
+		return translator.translate_list_type(self)
 
 
 class DocumentableObject(Object):
@@ -177,6 +189,9 @@ class Argument(DocumentableObject):
 		return self._type
 	
 	type = property(fset=_set_type, fget=_get_type)
+	
+	def translate(self, translator, **params):
+		return translator.translate_argument(self, **params)
 
 
 class Method(DocumentableObject):
@@ -190,7 +205,11 @@ class Method(DocumentableObject):
 		self.constMethod = False
 		self.args = []
 		self._returnType = None
-		
+	
+	def add_arguments(self, arg):
+		self.args.append(arg)
+		arg.parent = self
+	
 	def _set_return_type(self, returnType):
 		self._returnType = returnType
 		returnType.parent = self
@@ -198,11 +217,10 @@ class Method(DocumentableObject):
 	def _get_return_type(self):
 		return self._returnType
 	
-	def add_arguments(self, arg):
-		self.args.append(arg)
-		arg.parent = self
-	
 	returnType = property(fset=_set_return_type, fget=_get_return_type)
+	
+	def translate_as_prototype(self, translator, **params):
+		return translator.translate_method_as_prototype(self, **params)
 
 
 class Property(DocumentableObject):
@@ -703,3 +721,134 @@ class CParser(object):
 			return BaseType(name, **param)
 		else:
 			raise Error('could not find type in \'{0}\''.format(cDecl))
+
+
+class CppLangTranslator:
+	def __init__(self):
+		self.nameTranslator = metaname.CppTranslator()
+		self.ambigousTypes = []
+	
+	def translate_base_type(self, _type, **params):
+		if _type.name == 'void':
+			if _type.isref:
+				return 'void *'
+			else:
+				return 'void'
+		elif _type.name == 'boolean':
+			res = 'bool'
+		elif _type.name == 'character':
+			res = 'char'
+		elif _type.name == 'size':
+			res = 'size_t'
+		elif _type.name == 'time':
+			res = 'time_t'
+		elif _type.name == 'integer':
+			if _type.size is None:
+				res = 'int'
+			elif isinstance(_type.size, str):
+				res = _type.size
+			else:
+				res = 'int{0}_t'.format(_type.size)
+				
+		elif _type.name == 'floatant':
+			if _type.size is not None and _type.size == 'double':
+				res = 'double'
+			else:
+				res = 'float'
+		elif _type.name == 'status':
+			res = 'linphone::Status'
+		elif _type.name == 'string':
+			res = 'std::string'
+			if type(_type.parent) is Argument:
+				res += ' &'
+		elif _type.name == 'string_array':
+			res = 'std::list<std::string>'
+			if type(_type.parent) is Argument:
+				res += ' &'
+		else:
+			raise Error('\'{0}\' is not a base abstract type'.format(_type.name))
+		
+		if _type.isUnsigned:
+			if _type.name == 'integer' and isinstance(_type.size, int):
+				res = 'u' + res
+			else:
+				res = 'unsigned ' + res
+		
+		if _type.isconst:
+			if _type.name not in ['string', 'string_array'] or type(_type.parent) is Argument:
+				res = 'const ' + res
+		
+		if _type.isref:
+			res += ' *'
+		return res
+	
+	def translate_enum_type(self, _type, **params):
+		if _type.desc is None:
+			raise Error('{0} has not been fixed'.format(_type.name))
+		
+		if 'namespace' in params:
+			nsName = params['namespace'].name if params['namespace'] is not None else None
+		else:
+			method = _type.find_first_ancestor_by_type(Method)
+			nsName = metaname.Name.find_common_parent(_type.desc.name, method.name)
+		
+		return _type.desc.name.translate(self.nameTranslator, recursive=True, topAncestor=nsName)
+	
+	def translate_class_type(self, _type, **params):
+		if _type.desc is None:
+			raise Error('{0} has not been fixed'.format(_type.name))
+		
+		if 'namespace' in params:
+			nsName = params['namespace'].name if params['namespace'] is not None else None
+		else:
+			method = _type.find_first_ancestor_by_type(Method)
+			nsName = metaname.Name.find_common_parent(_type.desc.name, method.name)
+		
+		if _type.desc.name.to_c() in self.ambigousTypes:
+			nsName = None
+		
+		res = _type.desc.name.translate(self.nameTranslator, recursive=True, topAncestor=nsName)
+		
+		if _type.desc.refcountable:
+			if _type.isconst:
+				res = 'const ' + res
+			if type(_type.parent) is Argument:
+				return 'const std::shared_ptr<{0}> &'.format(res)
+			else:
+				return 'std::shared_ptr<{0}>'.format(res)
+		else:
+			if type(_type.parent) is Argument:
+				return 'const {0} &'.format(res)
+			else:
+				return '{0}'.format(res)
+	
+	def translate_list_type(self, _type, **params):
+		if _type.containedTypeDesc is None:
+			raise Error('{0} has not been fixed'.format(_type.containedTypeName))
+		elif isinstance(_type.containedTypeDesc, BaseType):
+			res = _type.containedTypeDesc.translate(self)
+		else:
+			res = _type.containedTypeDesc.translate(self, **params)
+			
+		if type(_type.parent) is Argument:
+			return 'const std::list<{0} > &'.format(res)
+		else:
+			return 'std::list<{0} >'.format(res)
+	
+	def translate_method_as_prototype(self, method, **params):
+		methodElems = {}
+		methodElems['return'] = method.returnType.translate(self, **params)
+		methodElems['name'] = method.name.translate(self.nameTranslator, **params)
+		
+		methodElems['params'] = ''
+		for arg in method.args:
+			if arg is not method.args[0]:
+				methodElems['params'] += ', '
+			methodElems['params'] += arg.translate(self, **params)
+		
+		methodElems['const'] = ' const' if method.constMethod else ''
+		
+		return '{return} {name}({params}){const}'.format(**methodElems)
+	
+	def translate_argument(self, argument, **params):
+		return '{0} {1}'.format(argument.type.translate(self, **params), argument.name.translate(self.nameTranslator))

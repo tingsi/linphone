@@ -106,10 +106,10 @@ namespace linphone {
 			 {{/lines}}
 			 */
 			{{/doc}}
-			{{{prototype}}}
+			LINPHONECXX_PUBLIC {{#deprecated}}LINPHONECXX_DEPRECATED {{/deprecated}}{{#isListener}}virtual {{/isListener}}{{{declPrototype}}}{{{suffix}}};
 			
 			{{/methods}}
-			{{#staticMethods}}
+			{{#staticMethods}};
 			{{#doc}}
 			/**
 			 {{#lines}}
@@ -117,7 +117,7 @@ namespace linphone {
 			 {{/lines}}
 			 */
 			{{/doc}}
-			{{{prototype}}}
+			LINPHONECXX_PUBLIC {{#deprecated}}LINPHONECXX_DEPRECATED {{/deprecated}}static {{{declPrototype}}};
 			
 			{{/staticMethods}}
 
