@@ -50,13 +50,24 @@ class ClassPage(object):
 		self._init_translation_info(language)
 		self.filename = '{0}_{1}.rst'.format(self.prefix, _class.name.to_snake_case(fullName=True))
 		self.className = _class.name.translate(self.nameTranslator)
-		self.classBrief = self.docTranslator.translate(_class.briefDescription)
+		self.classBrief = _class.briefDescription.translate(self.docTranslator)
+		self.methods = self._translate_methods(_class.instanceMethods)
+		self.classMethods = self._translate_methods(_class.classMethods)
 	
 	def make_chapter(self):
 		return lambda text: RstTools.make_chapter(pystache.render(text, self))
 	
 	def make_section(self):
 		return lambda text: RstTools.make_section(pystache.render(text, self))
+	
+	def _has_methods(self):
+		return len(self.methods) > 0
+	
+	def _has_class_methods(self):
+		return len(self.classMethods)
+	
+	hasMethods = property(fget=_has_methods)
+	hasClassMethods = property(fget=_has_class_methods)
 	
 	def write(self, directory='.'):
 		r = pystache.Renderer()
@@ -69,8 +80,19 @@ class ClassPage(object):
 			self.prefix = 'cpp'
 			self.nameTranslator = metaname.CppTranslator()
 			self.docTranslator = metadoc.SphinxTranslator(self.nameTranslator)
+			self.langTranslator = abstractapi.CppLangTranslator()
 		else:
 			raise ValueError(language)
+	
+	def _translate_methods(self, methods):
+		translatedMethods = []
+		for method in methods:
+			methAttr = {
+				'prototype' : method.translate_as_prototype(self.langTranslator),
+				'brief'     : method.briefDescription.translate(self.docTranslator)
+			}
+			translatedMethods.append(methAttr)
+		return translatedMethods
 
 
 if __name__ == '__main__':

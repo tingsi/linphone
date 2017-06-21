@@ -47,7 +47,7 @@ class CppTranslator(object):
 	def translate_enum(self, enum):
 		enumDict = {}
 		enumDict['name'] = enum.name.to_camel_case()
-		enumDict['doc'] = self.docTranslator.translate(enum.briefDescription)
+		enumDict['doc'] = enum.briefDescription.translate(self.docTranslator)
 		enumDict['values'] = []
 		i = 0
 		for enumValue in enum.values:
@@ -60,7 +60,7 @@ class CppTranslator(object):
 	def translate_enum_value(self, enumValue):
 		enumValueDict = {}
 		enumValueDict['name'] = enumValue.name.translate(self.nameTranslator)
-		enumValueDict['doc'] = self.docTranslator.translate(enumValue.briefDescription)
+		enumValueDict['doc'] = enumValue.briefDescription.translate(self.docTranslator)
 		if type(enumValue.value) is int:
 			enumValueDict['value'] = str(enumValue.value)
 		elif type(enumValue.value) is AbsApi.Flag:
@@ -98,7 +98,7 @@ class CppTranslator(object):
 		if _class.name.to_c() == 'LinphoneCore':
 			classDict['friendClasses'].append({'name': 'Factory'});
 		
-		classDict['doc'] = self.docTranslator.translate(_class.briefDescription)
+		classDict['doc'] = _class.briefDescription.translate(self.docTranslator)
 		
 		if islistenable:
 			classDict['listenerClassName'] = _class.listenerInterface.name.translate(self.nameTranslator)
@@ -204,7 +204,7 @@ class CppTranslator(object):
 			'implPrototype': method.translate_as_prototype(self.langTranslator, recursive=True, topAncestor=namespace),
 			'deprecated': method.deprecated,
 			'suffix': '',
-			'doc': self.docTranslator.translate(method.briefDescription) if method.briefDescription is not None else None
+			'doc': method.briefDescription.translate(self.docTranslator) if method.briefDescription is not None else None
 		}
 		
 		if type(method.parent) is AbsApi.Interface:

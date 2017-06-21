@@ -61,6 +61,9 @@ class Description:
 	def resolve_all_references(self, api):
 		for paragraph in self.paragraphs:
 			paragraph.resolve_all_references(api)
+	
+	def translate(self, translator):
+		return translator.translate_description(self)
 
 
 class Parser:
@@ -105,7 +108,7 @@ class Translator:
 		self.textWidth = 80
 		self.nameTranslator = nameTranslator
 	
-	def translate(self, description):
+	def translate_description(self, description):
 		if description is None:
 			return None
 		

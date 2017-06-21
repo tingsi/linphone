@@ -8,5 +8,34 @@
 	{{/lines}}
 	{{/classBrief}}
 
+{{#hasMethods}}
 Public methods
 ==============
+
+{{#methods}}
+.. {{{prefix}}}:function:: {{{prototype}}}
+	
+	{{#brief}}
+	{{#lines}}
+	{{{line}}}
+	{{/lines}}
+	{{/brief}}
+
+{{/methods}}
+
+{{/hasMethods}}
+{{#hasClassMethods}}
+Class methods
+=============
+
+{{#classMethods}}
+.. {{{prefix}}}:function:: static {{{prototype}}}
+	
+	{{#brief}}
+	{{#lines}}
+	{{{line}}}
+	{{/lines}}
+	{{/brief}}
+
+{{/classMethods}}
+{{/hasClassMethods}}
