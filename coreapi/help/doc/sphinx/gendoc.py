@@ -49,7 +49,9 @@ class ClassPage(object):
 	def __init__(self, _class, language):
 		self._init_translation_info(language)
 		self.filename = '{0}_{1}.rst'.format(self.prefix, _class.name.to_snake_case(fullName=True))
+		self.namespace = self._get_translated_namespace(_class)
 		self.className = _class.name.translate(self.nameTranslator)
+		self.fullClassName = _class.name.translate(self.nameTranslator, recursive=True)
 		self.classBrief = _class.briefDescription.translate(self.docTranslator)
 		self.methods = self._translate_methods(_class.instanceMethods)
 		self.classMethods = self._translate_methods(_class.classMethods)
@@ -83,6 +85,10 @@ class ClassPage(object):
 			self.langTranslator = abstractapi.CppLangTranslator()
 		else:
 			raise ValueError(language)
+	
+	def _get_translated_namespace(self, _class):
+		namespace = _class.find_first_ancestor_by_type(abstractapi.Namespace)
+		return namespace.name.translate(self.nameTranslator, recursive=True)
 	
 	def _translate_methods(self, methods):
 		translatedMethods = []

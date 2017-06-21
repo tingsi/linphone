@@ -513,7 +513,7 @@ typedef struct _LinphoneEvent LinphoneEvent;
 
 /**
  * #LinphoneFactory is a singleton object devoted to the creation of all the object
- * of Liblinphone that cannot created by #LinphoneCore or #LinphoneCore itself.
+ * of Liblinphone that cannot be created by #LinphoneCore itself.
  * @ingroup initializing
  */
 typedef struct _LinphoneFactory LinphoneFactory;

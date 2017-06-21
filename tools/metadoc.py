@@ -202,7 +202,10 @@ class SphinxTranslator(Translator):
 	
 	def _translate_reference(self, ref):
 		if ref.relatedObject is not None:
-			return self._sphinx_ref_tag(ref) + ' ' + ref.relatedObject.name.translate(self.nameTranslator)
+			return ':{tag}:`{ref}`'.format(
+				tag=self._sphinx_ref_tag(ref),
+				ref=ref.relatedObject.name.translate(self.nameTranslator, recursive=True)
+			)
 		else:
 			raise ReferenceTranslationError(ref.cname)
 	
@@ -216,7 +219,7 @@ class SphinxTranslator(Translator):
 		else:
 			refType = 'any'
 		
-		return '..{ns}:{type}::'.format(ns=self.sphinxNamespace, type=refType)
+		return '{ns}:{type}'.format(ns=self.sphinxNamespace, type=refType)
 
 
 class SandcastleCSharpTranslator(Translator):

@@ -1,6 +1,6 @@
 {{#make_chapter}}{{{className}}} class{{/make_chapter}}
 
-.. {{{prefix}}}:class:: {{{className}}}
+.. {{{prefix}}}:class:: {{{fullClassName}}}
 	
 	{{#classBrief}}
 	{{#lines}}
@@ -11,6 +11,8 @@
 {{#hasMethods}}
 Public methods
 ==============
+
+.. {{{prefix}}}:namespace:: {{{fullClassName}}}
 
 {{#methods}}
 .. {{{prefix}}}:function:: {{{prototype}}}
