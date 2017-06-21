@@ -45,10 +45,45 @@ class RstTools:
 		return '\n'.join(lines)
 
 
-class ClassPage(object):
-	def __init__(self, _class, language):
+class SphinxPage(object):
+	def __init__(self, language, filename):
+		object.__init__(self)
 		self._init_translation_info(language)
-		self.filename = '{0}_{1}.rst'.format(self.prefix, _class.name.to_snake_case(fullName=True))
+		self.filename = filename
+	
+	def write(self, directory='.'):
+		r = pystache.Renderer()
+		filepath = os.path.join(directory, self.filename)
+		with open(filepath, mode='w') as f:
+			f.write(r.render(self))
+	
+	def _init_translation_info(self, language):
+		if language.lower() == 'c++':
+			self.prefix = 'cpp'
+			self.nameTranslator = metaname.CppTranslator()
+			self.docTranslator = metadoc.SphinxTranslator(self.nameTranslator)
+			self.langTranslator = abstractapi.CppLangTranslator()
+		else:
+			raise ValueError(language)
+	
+	@staticmethod
+	def _classname_to_filename(classname):
+		return classname.to_snake_case(fullName=True) + '.rst'
+
+
+class IndexPage(SphinxPage):
+	def __init__(self, language):
+		SphinxPage.__init__(self, language, 'index.rst')
+		self.tocEntries = []
+	
+	def add_class_entry(self, _class):
+		self.tocEntries.append({'entryName': SphinxPage._classname_to_filename(_class.name)})
+
+
+class ClassPage(SphinxPage):
+	def __init__(self, _class, language):
+		filename = SphinxPage._classname_to_filename(_class.name)
+		SphinxPage.__init__(self, language, filename)
 		self.namespace = self._get_translated_namespace(_class)
 		self.className = _class.name.translate(self.nameTranslator)
 		self.fullClassName = _class.name.translate(self.nameTranslator, recursive=True)
@@ -70,21 +105,6 @@ class ClassPage(object):
 	
 	hasMethods = property(fget=_has_methods)
 	hasClassMethods = property(fget=_has_class_methods)
-	
-	def write(self, directory='.'):
-		r = pystache.Renderer()
-		filepath = os.path.join(directory, self.filename)
-		with open(filepath, mode='w') as f:
-			f.write(r.render(self))
-	
-	def _init_translation_info(self, language):
-		if language.lower() == 'c++':
-			self.prefix = 'cpp'
-			self.nameTranslator = metaname.CppTranslator()
-			self.docTranslator = metadoc.SphinxTranslator(self.nameTranslator)
-			self.langTranslator = abstractapi.CppLangTranslator()
-		else:
-			raise ValueError(language)
 	
 	def _get_translated_namespace(self, _class):
 		namespace = _class.find_first_ancestor_by_type(abstractapi.Namespace)
@@ -113,7 +133,11 @@ if __name__ == '__main__':
 
 	absApiParser = abstractapi.CParser(cProject)
 	absApiParser.parse_all()
-
+	
+	indexPage = IndexPage('c++')
 	for _class in absApiParser.classesIndex.values():
 		page = ClassPage(_class, 'c++')
 		page.write(directory=args.outputdir)
+		indexPage.add_class_entry(_class)
+	
+	indexPage.write(directory=args.outputdir)
