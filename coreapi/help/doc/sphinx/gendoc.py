@@ -51,6 +51,12 @@ class SphinxPage(object):
 		self._init_translation_info(language)
 		self.filename = filename
 	
+	def make_chapter(self):
+		return lambda text: RstTools.make_chapter(pystache.render(text, self))
+	
+	def make_section(self):
+		return lambda text: RstTools.make_section(pystache.render(text, self))
+	
 	def write(self, directory='.'):
 		r = pystache.Renderer()
 		filepath = os.path.join(directory, self.filename)
@@ -80,6 +86,36 @@ class IndexPage(SphinxPage):
 		self.tocEntries.append({'entryName': SphinxPage._classname_to_filename(_class.name)})
 
 
+class EnumsPage(SphinxPage):
+	def __init__(self, language, enums):
+		SphinxPage.__init__(self, language, 'enums.rst')
+		self._translate_enums(enums)
+	
+	def _translate_enums(self, enums):
+		self.enums = []
+		for enum in enums:
+			translatedEnum = {
+				'name'         : enum.name.translate(self.nameTranslator),
+				'fullName'     : enum.name.translate(self.nameTranslator, recursive=True),
+				'briefDesc'    : enum.briefDescription.translate(self.docTranslator),
+				'enumerators'  : self._translate_enum_values(enum)
+			}
+			translatedEnum['sectionName'] = RstTools.make_section(translatedEnum['name'])
+			self.enums.append(translatedEnum)
+	
+	def _translate_enum_values(self, enum):
+		translatedEnumerators = []
+		for enumerator in enum.enumerators:
+			translatedValue = {
+				'name'      : enumerator.name.translate(self.nameTranslator),
+				'briefDesc' : enumerator.briefDescription.translate(self.docTranslator),
+				'value'     : enumerator.translate_value(self.langTranslator)
+			}
+			translatedEnumerators.append(translatedValue)
+		
+		return translatedEnumerators
+
+
 class ClassPage(SphinxPage):
 	def __init__(self, _class, language):
 		filename = SphinxPage._classname_to_filename(_class.name)
@@ -90,12 +126,6 @@ class ClassPage(SphinxPage):
 		self.classBrief = _class.briefDescription.translate(self.docTranslator)
 		self.methods = self._translate_methods(_class.instanceMethods)
 		self.classMethods = self._translate_methods(_class.classMethods)
-	
-	def make_chapter(self):
-		return lambda text: RstTools.make_chapter(pystache.render(text, self))
-	
-	def make_section(self):
-		return lambda text: RstTools.make_section(pystache.render(text, self))
 	
 	def _has_methods(self):
 		return len(self.methods) > 0
@@ -133,6 +163,9 @@ if __name__ == '__main__':
 
 	absApiParser = abstractapi.CParser(cProject)
 	absApiParser.parse_all()
+	
+	enumsPage = EnumsPage('c++', absApiParser.enumsIndex.values())
+	enumsPage.write(directory=args.outputdir)
 	
 	indexPage = IndexPage('c++')
 	for _class in absApiParser.classesIndex.values():

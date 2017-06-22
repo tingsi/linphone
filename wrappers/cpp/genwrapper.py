@@ -48,26 +48,20 @@ class CppTranslator(object):
 		enumDict = {}
 		enumDict['name'] = enum.name.to_camel_case()
 		enumDict['doc'] = enum.briefDescription.translate(self.docTranslator)
-		enumDict['values'] = []
-		i = 0
-		for enumValue in enum.values:
-			enumValDict = self.translate_enum_value(enumValue)
-			enumValDict['notLast'] = (i != len(enum.values)-1)
-			enumDict['values'].append(enumValDict)
-			i += 1
+		enumDict['enumerators'] = []
+		for enumerator in enum.enumerators:
+			enumeratorDict = self.translate_enumerator(enumerator)
+			enumeratorDict['notLast'] = (enumerator is not enum.enumerators[-1])
+			enumDict['enumerators'].append(enumeratorDict)
 		return enumDict
 	
-	def translate_enum_value(self, enumValue):
-		enumValueDict = {}
-		enumValueDict['name'] = enumValue.name.translate(self.nameTranslator)
-		enumValueDict['doc'] = enumValue.briefDescription.translate(self.docTranslator)
-		if type(enumValue.value) is int:
-			enumValueDict['value'] = str(enumValue.value)
-		elif type(enumValue.value) is AbsApi.Flag:
-			enumValueDict['value'] = '1<<' + str(enumValue.value.position)
-		else:
-			enumValueDict['value'] = None
-		return enumValueDict
+	def translate_enumerator(self, enumerator):
+		enumeratorDict = {
+			'name'  : enumerator.name.translate(self.nameTranslator),
+			'doc'   : enumerator.briefDescription.translate(self.docTranslator),
+			'value' : enumerator.translate_value(self.langTranslator)
+		}
+		return enumeratorDict
 	
 	def translate_class(self, _class):
 		islistenable = _class.listenerInterface is not None

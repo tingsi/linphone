@@ -133,7 +133,7 @@ class Flag:
 		self.position = position
 
 
-class EnumValue(DocumentableObject):
+class Enumerator(DocumentableObject):
 	def __init__(self, name):
 		DocumentableObject.__init__(self, name)
 		self.value = None
@@ -144,16 +144,19 @@ class EnumValue(DocumentableObject):
 			self.value = Flag(int(m.group(1)))
 		else:
 			self.value = int(stringValue, base=0)
+	
+	def translate_value(self, translator):
+		return translator.translate_enumerator_value(self.value)
 
 
 class Enum(DocumentableObject):
 	def __init__(self, name):
 		DocumentableObject.__init__(self, name)
-		self.values = []
+		self.enumerators = []
 	
-	def add_value(self, value):
-		self.values.append(value)
-		value.parent = self
+	def add_enumerator(self, enumerator):
+		self.enumerators.append(enumerator)
+		enumerator.parent = self
 	
 	def set_from_c(self, cEnum, namespace=None):
 		Object.set_from_c(self, cEnum, namespace=namespace)
@@ -168,9 +171,9 @@ class Enum(DocumentableObject):
 		self.name.set_from_c(name)
 		
 		for cEnumValue in cEnum.values:
-			aEnumValue = EnumValue()
+			aEnumValue = Enumerator()
 			aEnumValue.set_from_c(cEnumValue, namespace=self)
-			self.add_value(aEnumValue)
+			self.add_enumerator(aEnumValue)
 
 
 class Argument(DocumentableObject):
@@ -479,14 +482,14 @@ class CParser(object):
 		for cEnumValue in cenum.values:
 			valueName = metaname.EnumValueName()
 			valueName.from_camel_case(cEnumValue.name, namespace=name)
-			aEnumValue = EnumValue(valueName)
+			aEnumValue = Enumerator(valueName)
 			aEnumValue.briefDescription = cEnumValue.briefDoc
 			if cEnumValue.value is not None:
 				try:
 					aEnumValue.value_from_string(cEnumValue.value)
 				except ValueError:
 					raise Error('{0} enum value has an invalid definition ({1})'.format(cEnumValue.name, cEnumValue.value))
-			enum.add_value(aEnumValue)
+			enum.add_enumerator(aEnumValue)
 		
 		self.enumsIndex[nameStr] = enum
 		return enum
@@ -834,6 +837,16 @@ class CppLangTranslator:
 			return 'const std::list<{0} > &'.format(res)
 		else:
 			return 'std::list<{0} >'.format(res)
+	
+	def translate_enumerator_value(self, value):
+		if value is None:
+			return None
+		elif isinstance(value, int):
+			return str(value)
+		elif isinstance(value, Flag):
+			return '1<<{0}'.format(value.position)
+		else:
+			raise TypeError('invalid enumerator value type: {0}'.format(value))
 	
 	def translate_method_as_prototype(self, method, **params):
 		methodElems = {}
