@@ -35,8 +35,8 @@ if (ENABLE_DOC OR ENABLE_CXX_WRAPPER OR ENABLE_CSHARP_WRAPPER)
                                 COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
                                 DEPENDS ${DOC_INPUT_FILES}
                         )
-                        add_custom_target(linphone-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/html/index.html" "${CMAKE_CURRENT_BINARY_DIR}/xml/index.xml")
-                        install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html" "${CMAKE_CURRENT_BINARY_DIR}/xml"
+                        add_custom_target(linphone-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/html/index.html" "${LINPHONE_DOXYGEN_XML_DIR}/index.xml")
+                        install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html" "${LINPHONE_DOXYGEN_XML_DIR}"
                                 DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/linphone-${LINPHONE_VERSION}")
                 else()
                         if (ENABLE_CXX_WRAPPER) 

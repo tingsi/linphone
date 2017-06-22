@@ -48,6 +48,7 @@ class RstTools:
 class SphinxPage(object):
 	def __init__(self, language, filename):
 		object.__init__(self)
+		self.language = language
 		self._init_translation_info(language)
 		self.filename = filename
 	
@@ -164,13 +165,17 @@ if __name__ == '__main__':
 	absApiParser = abstractapi.CParser(cProject)
 	absApiParser.parse_all()
 	
-	enumsPage = EnumsPage('c++', absApiParser.enumsIndex.values())
-	enumsPage.write(directory=args.outputdir)
+	directory = os.path.join(args.outputdir, 'cpp')
+	if not os.path.exists(directory):
+		os.mkdir(directory)
 	
-	indexPage = IndexPage('c++')
+	enumsPage = EnumsPage('C++', absApiParser.enumsIndex.values())
+	enumsPage.write(directory=directory)
+	
+	indexPage = IndexPage('C++')
 	for _class in absApiParser.classesIndex.values():
-		page = ClassPage(_class, 'c++')
-		page.write(directory=args.outputdir)
+		page = ClassPage(_class, 'C++')
+		page.write(directory=directory)
 		indexPage.add_class_entry(_class)
 	
-	indexPage.write(directory=args.outputdir)
+	indexPage.write(directory=directory)
