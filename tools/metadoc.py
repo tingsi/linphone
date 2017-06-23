@@ -195,21 +195,24 @@ class DoxygenTranslator(Translator):
 class SphinxTranslator(Translator):
 	def __init__(self, nameTranslator):
 		Translator.__init__(self, nameTranslator)
-		self.classDeclarator = 'class'
-		self.methodDeclarator = 'function'
-		self.enumDeclarator = 'enum'
-		self.enumeratorDeclarator = 'enumerator'
-		self.needNamespace = True
 		if isinstance(nameTranslator, metaname.CTranslator):
 			self.namespace = 'c'
 			self.classDeclarator = 'type'
+			self.methodDeclarator = 'function'
 			self.enumDeclarator = 'type'
 			self.enumeratorDeclarator = 'var'
 			self.needNamespace = False
 		elif isinstance(nameTranslator, metaname.CppTranslator):
 			self.namespace = 'cpp'
+			self.classDeclarator = 'class'
+			self.methodDeclarator = 'function'
+			self.enumDeclarator = 'enum'
+			self.enumeratorDeclarator = 'enumerator'
+			self.needNamespace = True
 		else:
 			TypeError('not suppored name translator: ' + str(nameTranslator))
+		
+		self.methodReferencer = 'func'
 	
 	def get_declarator(self, typeName):
 		try:
@@ -218,6 +221,17 @@ class SphinxTranslator(Translator):
 			return '{0}:{1}'.format(self.namespace, declarator)
 		except AttributeError:
 			raise ValueError("'{0}' declarator type not supported".format(typeName))
+	
+	def get_referencer(self, typeName):
+		try:
+			attrName = typeName + 'Referencer'
+			if attrName in dir(self):
+				referencer = getattr(self, attrName)
+				return '{0}:{1}'.format(self.namespace, referencer)
+			else:
+				return self.get_declarator(typeName)
+		except AttributeError:
+			raise ValueError("'{0}' referencer type not supported".format(typeName))
 	
 	def _translate_reference(self, ref):
 		if ref.relatedObject is not None:
@@ -230,7 +244,7 @@ class SphinxTranslator(Translator):
 	
 	def _sphinx_ref_tag(self, ref):
 		typeName = type(ref.relatedObject).__name__.lower()
-		return self.get_declarator(typeName)
+		return self.get_referencer(typeName)
 
 
 class SandcastleCSharpTranslator(Translator):
