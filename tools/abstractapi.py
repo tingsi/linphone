@@ -46,7 +46,7 @@ class Type(Object):
 		Object.__init__(self, name)
 		self.isconst = isconst
 		self.isref = isref
-		self.cname = None
+		self.cDecl = None
 
 
 class BaseType(Type):
@@ -205,7 +205,7 @@ class Method(DocumentableObject):
 	def __init__(self, name, type=Type.Instance):
 		DocumentableObject.__init__(self, name)
 		self.type = type
-		self.constMethod = False
+		self.isconst = False
 		self.args = []
 		self._returnType = None
 	
@@ -480,7 +480,7 @@ class CParser(object):
 		self.namespace.add_child(enum)
 		
 		for cEnumValue in cenum.values:
-			valueName = metaname.EnumValueName()
+			valueName = metaname.EnumeratorName()
 			valueName.from_camel_case(cEnumValue.name, namespace=name)
 			aEnumValue = Enumerator(valueName)
 			aEnumValue.briefDescription = cEnumValue.briefDoc
@@ -633,7 +633,7 @@ class CParser(object):
 		
 		for arg in cfunction.arguments:
 			if type == Method.Type.Instance and arg is cfunction.arguments[0]:
-				method.constMethod = ('const' in arg.completeType.split(' '))
+				method.isconst = ('const' in arg.completeType.split(' '))
 			else:
 				aType = self.parse_type(arg)
 				argName = metaname.ArgName()
@@ -660,7 +660,7 @@ class CParser(object):
 		else:
 			raise Error('Unknown C type \'{0}\''.format(cType.ctype))
 		
-		absType.cname = cType.completeType
+		absType.cDecl = cType.completeType
 		return absType
 	
 	def parse_c_base_type(self, cDecl):
@@ -726,7 +726,64 @@ class CParser(object):
 			raise Error('could not find type in \'{0}\''.format(cDecl))
 
 
-class CppLangTranslator:
+class CLikeLangTranslator:
+	def translate_enumerator_value(self, value):
+		if value is None:
+			return None
+		elif isinstance(value, int):
+			return str(value)
+		elif isinstance(value, Flag):
+			return '1<<{0}'.format(value.position)
+		else:
+			raise TypeError('invalid enumerator value type: {0}'.format(value))
+	
+	def translate_argument(self, argument, **params):
+		return '{0} {1}'.format(argument.type.translate(self, **params), argument.name.translate(self.nameTranslator))
+
+
+class CLangTranslator(CLikeLangTranslator):
+	def __init__(self):
+		self.nameTranslator = metaname.CTranslator()
+	
+	def translate_base_type(self, _type):
+		return _type.cDecl
+	
+	def translate_enum_type(self, _type):
+		return _type.cDecl
+	
+	def translate_class_type(self, _type):
+		return _type.cDecl
+	
+	def translate_list_type(self, _type):
+		return _type.cDecl
+	
+	def translate_enumerator_value(self, value):
+		if value is None:
+			return None
+		elif isinstance(value, int):
+			return str(value)
+		elif isinstance(value, Flag):
+			return '1<<{0}'.format(value.position)
+		else:
+			raise TypeError('invalid enumerator value type: {0}'.format(value))
+	
+	def translate_method_as_prototype(self, method, **params):
+		_class = method.find_first_ancestor_by_type(Class)
+		params = '{const}{className} *obj'.format(
+			className=_class.name.to_c(),
+			const='const ' if method.isconst else ''
+		)
+		for arg in method.args:
+			params += (', ' + arg.translate(self))
+		
+		return '{returnType} {name}({params})'.format(
+			returnType=method.returnType.translate(self),
+			name=method.name.translate(self.nameTranslator),
+			params=params
+		)
+
+
+class CppLangTranslator(CLikeLangTranslator):
 	def __init__(self):
 		self.nameTranslator = metaname.CppTranslator()
 		self.ambigousTypes = []
@@ -838,30 +895,16 @@ class CppLangTranslator:
 		else:
 			return 'std::list<{0} >'.format(res)
 	
-	def translate_enumerator_value(self, value):
-		if value is None:
-			return None
-		elif isinstance(value, int):
-			return str(value)
-		elif isinstance(value, Flag):
-			return '1<<{0}'.format(value.position)
-		else:
-			raise TypeError('invalid enumerator value type: {0}'.format(value))
-	
 	def translate_method_as_prototype(self, method, **params):
-		methodElems = {}
-		methodElems['return'] = method.returnType.translate(self, **params)
-		methodElems['name'] = method.name.translate(self.nameTranslator, **params)
-		
-		methodElems['params'] = ''
+		argsString = ''
+		argStrings = []
 		for arg in method.args:
-			if arg is not method.args[0]:
-				methodElems['params'] += ', '
-			methodElems['params'] += arg.translate(self, **params)
+			argStrings.append(arg.translate(self, **params))
+		argsString = ', '.join(argStrings)
 		
-		methodElems['const'] = ' const' if method.constMethod else ''
-		
-		return '{return} {name}({params}){const}'.format(**methodElems)
-	
-	def translate_argument(self, argument, **params):
-		return '{0} {1}'.format(argument.type.translate(self, **params), argument.name.translate(self.nameTranslator))
+		return '{_return} {name}({args}){const}'.format(
+			_return=method.returnType.translate(self, **params),
+			name=method.name.translate(self.nameTranslator, **params),
+			args=argsString,
+			const=' const' if method.isconst else ''
+		)

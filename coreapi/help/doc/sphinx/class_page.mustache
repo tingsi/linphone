@@ -1,6 +1,6 @@
 {{#make_chapter}}{{{className}}} class{{/make_chapter}}
 
-.. {{{prefix}}}:class:: {{{fullClassName}}}
+.. {{#write_declarator}}class{{/write_declarator}}:: {{{fullClassName}}}
 	
 	{{#classBrief}}
 	{{#lines}}
@@ -12,10 +12,12 @@
 Public methods
 ==============
 
-.. {{{prefix}}}:namespace:: {{{fullClassName}}}
+{{#needNamespace}}
+.. {{#write_declarator}}namespace{{/write_declarator}}:: {{{fullClassName}}}
+{{/needNamespace}}
 
 {{#methods}}
-.. {{{prefix}}}:function:: {{{prototype}}}
+.. {{#write_declarator}}method{{/write_declarator}}:: {{{prototype}}}
 	
 	{{#brief}}
 	{{#lines}}
@@ -30,10 +32,12 @@ Public methods
 Class methods
 =============
 
-.. {{{prefix}}}:namespace:: {{{fullClassName}}}
+{{#needNamespace}}
+.. {{#write_declarator}}namespace{{/write_declarator}}:: {{{fullClassName}}}
+{{/needNamespace}}
 
 {{#classMethods}}
-.. {{{prefix}}}:function:: static {{{prototype}}}
+.. {{#write_declarator}}method{{/write_declarator}}:: static {{{prototype}}}
 	
 	{{#brief}}
 	{{#lines}}

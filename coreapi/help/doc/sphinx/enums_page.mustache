@@ -5,7 +5,7 @@ List of enumerations
 {{#enums}}
 {{{sectionName}}}
 
-.. {{{prefix}}}:enum:: {{{fullName}}}
+.. {{#write_declarator}}enum{{/write_declarator}}:: {{{fullName}}}
 	
 	{{#briefDesc}}
 	{{#lines}}
@@ -14,7 +14,7 @@ List of enumerations
 	{{/briefDesc}}
 	
 	{{#enumerators}}
-	.. {{{prefix}}}:enumerator:: {{{name}}}{{#value}} = {{{value}}}{{/value}}
+	.. {{#write_declarator}}enumerator{{/write_declarator}}:: {{{name}}}{{#value}} = {{{value}}}{{/value}}
 		
 		{{#briefDesc}}
 		{{#lines}}

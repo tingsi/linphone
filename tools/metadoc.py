@@ -195,10 +195,29 @@ class DoxygenTranslator(Translator):
 class SphinxTranslator(Translator):
 	def __init__(self, nameTranslator):
 		Translator.__init__(self, nameTranslator)
-		if isinstance(nameTranslator, metaname.CppTranslator):
-			self.sphinxNamespace = 'cpp'
+		self.classDeclarator = 'class'
+		self.methodDeclarator = 'function'
+		self.enumDeclarator = 'enum'
+		self.enumeratorDeclarator = 'enumerator'
+		self.needNamespace = True
+		if isinstance(nameTranslator, metaname.CTranslator):
+			self.namespace = 'c'
+			self.classDeclarator = 'type'
+			self.enumDeclarator = 'type'
+			self.enumeratorDeclarator = 'var'
+			self.needNamespace = False
+		elif isinstance(nameTranslator, metaname.CppTranslator):
+			self.namespace = 'cpp'
 		else:
 			TypeError('not suppored name translator: ' + str(nameTranslator))
+	
+	def get_declarator(self, typeName):
+		try:
+			attrName = typeName + 'Declarator'
+			declarator = getattr(self, attrName)
+			return '{0}:{1}'.format(self.namespace, declarator)
+		except AttributeError:
+			raise ValueError("'{0}' declarator type not supported".format(typeName))
 	
 	def _translate_reference(self, ref):
 		if ref.relatedObject is not None:
@@ -210,16 +229,8 @@ class SphinxTranslator(Translator):
 			raise ReferenceTranslationError(ref.cname)
 	
 	def _sphinx_ref_tag(self, ref):
-		if isinstance(ref.relatedObject, abstractapi.Class):
-			refType = 'class'
-		elif isinstance(ref.relatedObject, abstractapi.Enum):
-			refType = 'enum'
-		elif isinstance(ref.relatedObject, abstractapi.Method):
-			refType = 'function'
-		else:
-			refType = 'any'
-		
-		return '{ns}:{type}'.format(ns=self.sphinxNamespace, type=refType)
+		typeName = type(ref.relatedObject).__name__.lower()
+		return self.get_declarator(typeName)
 
 
 class SandcastleCSharpTranslator(Translator):

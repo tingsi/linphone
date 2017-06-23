@@ -152,9 +152,9 @@ class EnumName(ClassName):
 		return translator.translate_enum_name(self, **params)
 
 
-class EnumValueName(ClassName):
+class EnumeratorName(ClassName):
 	def translate(self, translator, **params):
-		return translator.translate_enum_value_name(self, **params)
+		return translator.translate_enumerator_name(self, **params)
 
 
 class MethodName(Name):
@@ -202,6 +202,32 @@ class NamespaceName(Name):
 		return translator.translate_namespace_name(self, **params)
 
 
+class CTranslator:
+	def translate_class_name(self, name, **params):
+		return name.to_c()
+	
+	def translate_interface_name(self, name, **params):
+		return name.to_c()
+	
+	def translate_enum_name(self, name, **params):
+		return name.to_c()
+	
+	def translate_enumerator_name(self, name, **params):
+		return name.to_c()
+	
+	def translate_method_name(self, name, **params):
+		return name.to_c()
+	
+	def translate_namespace_name(self, name, **params):
+		return None
+	
+	def translate_argument_name(self, name, **params):
+		return name.to_c()
+	
+	def translate_property_name(self, name, **params):
+		return name.to_c()
+
+
 class CppTranslator:
 	def translate_class_name(self, name, recursive=False, topAncestor=None):
 		if name.prev is None or not recursive or name.prev is topAncestor:
@@ -216,7 +242,7 @@ class CppTranslator:
 	def translate_enum_name(self, name, **params):
 		return self.translate_class_name(name, **params)
 	
-	def translate_enum_value_name(self, name, **params):
+	def translate_enumerator_name(self, name, **params):
 		return self.translate_enum_name(name.prev, **params) + name.to_camel_case()
 	
 	def translate_method_name(self, name, recursive=False, topAncestor=None):
