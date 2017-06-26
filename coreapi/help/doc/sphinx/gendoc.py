@@ -45,17 +45,39 @@ class RstTools:
 		return '\n'.join(lines)
 
 
+class LangInfo:
+	def __init__(self, langCode):
+		self.langCode = langCode
+		self.displayName = LangInfo._lang_code_to_display_name(langCode)
+		self.nameTranslator = metaname.Translator.get(langCode)
+		self.langTranslator = abstractapi.Translator.get(langCode)
+	
+	@staticmethod
+	def _lang_code_to_display_name(langCode):
+		if langCode == 'C':
+			return 'C'
+		elif langCode == 'Cpp':
+			return 'C++'
+		else:
+			raise ValueError("Invalid language code: '{0}'".format(langCode))
+
+
 class SphinxPage(object):
-	def __init__(self, langCode, filename):
+	def __init__(self, lang, filename):
 		object.__init__(self)
-		self.language = SphinxPage._langcode_to_langname(langCode)
-		self._init_translation_info(langCode)
+		self.lang = lang
+		self.docTranslator = metadoc.SphinxTranslator(lang.langCode)
 		self.filename = filename
 	
 	def _get_namespace_declararor_existence(self):
 		return 'namespaceDeclarator' in dir(self.docTranslator)
 	
 	hasNamespaceDeclarator = property(fget=_get_namespace_declararor_existence)
+	
+	def _get_language(self):
+		return self.lang.displayName
+	
+	language = property(fget=_get_language)
 	
 	def make_chapter(self):
 		return lambda text: RstTools.make_chapter(pystache.render(text, self))
@@ -72,28 +94,14 @@ class SphinxPage(object):
 		with open(filepath, mode='w') as f:
 			f.write(r.render(self))
 	
-	def _init_translation_info(self, langCode):
-		self.nameTranslator = metaname.Translator.get(langCode)
-		self.langTranslator = abstractapi.Translator.get(langCode)
-		self.docTranslator = metadoc.SphinxTranslator(langCode)
-	
-	@staticmethod
-	def _langcode_to_langname(langCode):
-		if langCode == 'C':
-			return 'C'
-		elif langCode == 'Cpp':
-			return 'C++'
-		else:
-			raise ValueError("Invalid language code: '{0}'".format(langCode))
-	
 	@staticmethod
 	def _classname_to_filename(classname):
 		return classname.to_snake_case(fullName=True) + '.rst'
 
 
 class IndexPage(SphinxPage):
-	def __init__(self, langCode):
-		SphinxPage.__init__(self, langCode, 'index.rst')
+	def __init__(self, lang):
+		SphinxPage.__init__(self, lang, 'index.rst')
 		self.tocEntries = []
 	
 	def add_class_entry(self, _class):
@@ -101,16 +109,16 @@ class IndexPage(SphinxPage):
 
 
 class EnumsPage(SphinxPage):
-	def __init__(self, langCode, enums):
-		SphinxPage.__init__(self, langCode, 'enums.rst')
+	def __init__(self, lang, enums):
+		SphinxPage.__init__(self, lang, 'enums.rst')
 		self._translate_enums(enums)
 	
 	def _translate_enums(self, enums):
 		self.enums = []
 		for enum in enums:
 			translatedEnum = {
-				'name'         : enum.name.translate(self.nameTranslator),
-				'fullName'     : enum.name.translate(self.nameTranslator, recursive=True),
+				'name'         : enum.name.translate(self.lang.nameTranslator),
+				'fullName'     : enum.name.translate(self.lang.nameTranslator, recursive=True),
 				'briefDesc'    : enum.briefDescription.translate(self.docTranslator),
 				'enumerators'  : self._translate_enum_values(enum)
 			}
@@ -121,9 +129,9 @@ class EnumsPage(SphinxPage):
 		translatedEnumerators = []
 		for enumerator in enum.enumerators:
 			translatedValue = {
-				'name'      : enumerator.name.translate(self.nameTranslator),
+				'name'      : enumerator.name.translate(self.lang.nameTranslator),
 				'briefDesc' : enumerator.briefDescription.translate(self.docTranslator),
-				'value'     : enumerator.translate_value(self.langTranslator)
+				'value'     : enumerator.translate_value(self.lang.langTranslator)
 			}
 			translatedEnumerators.append(translatedValue)
 		
@@ -131,12 +139,12 @@ class EnumsPage(SphinxPage):
 
 
 class ClassPage(SphinxPage):
-	def __init__(self, _class, langCode):
+	def __init__(self, _class, lang):
 		filename = SphinxPage._classname_to_filename(_class.name)
-		SphinxPage.__init__(self, langCode, filename)
+		SphinxPage.__init__(self, lang, filename)
 		self.namespace = self._get_translated_namespace(_class)
-		self.className = _class.name.translate(self.nameTranslator)
-		self.fullClassName = _class.name.translate(self.nameTranslator, recursive=True)
+		self.className = _class.name.translate(self.lang.nameTranslator)
+		self.fullClassName = _class.name.translate(self.lang.nameTranslator, recursive=True)
 		self.classBrief = _class.briefDescription.translate(self.docTranslator)
 		self.methods = self._translate_methods(_class.instanceMethods)
 		self.classMethods = self._translate_methods(_class.classMethods)
@@ -152,13 +160,13 @@ class ClassPage(SphinxPage):
 	
 	def _get_translated_namespace(self, _class):
 		namespace = _class.find_first_ancestor_by_type(abstractapi.Namespace)
-		return namespace.name.translate(self.nameTranslator, recursive=True)
+		return namespace.name.translate(self.lang.nameTranslator, recursive=True)
 	
 	def _translate_methods(self, methods):
 		translatedMethods = []
 		for method in methods:
 			methAttr = {
-				'prototype' : method.translate_as_prototype(self.langTranslator),
+				'prototype' : method.translate_as_prototype(self.lang.langTranslator),
 				'brief'     : method.briefDescription.translate(self.docTranslator)
 			}
 			translatedMethods.append(methAttr)
@@ -168,11 +176,14 @@ class ClassPage(SphinxPage):
 class DocGenerator:
 	def __init__(self, api):
 		self.api = api
-		self.languages = ['C', 'Cpp']
+		self.languages = [
+			LangInfo('C'),
+			LangInfo('Cpp')
+		]
 	
 	def generate(self, outputdir):
 		for lang in self.languages:
-			subdirectory = lang.lower()
+			subdirectory = lang.langCode.lower()
 			directory = os.path.join(args.outputdir, subdirectory)
 			if not os.path.exists(directory):
 				os.mkdir(directory)
