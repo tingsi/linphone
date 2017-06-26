@@ -202,7 +202,23 @@ class NamespaceName(Name):
 		return translator.translate_namespace_name(self, **params)
 
 
-class CTranslator:
+class Translator:
+	instances = {}
+	
+	@staticmethod
+	def get(langCode):
+		try:
+			if langCode not in Translator.instances:
+				className = langCode + 'Translator'
+				_class = globals()[className]
+				Translator.instances[langCode] = _class()
+			
+			return Translator.instances[langCode]
+		except KeyError:
+			raise ValueError("Invalid language code: '{0}'".format(langCode))
+
+
+class CTranslator(Translator):
 	def translate_class_name(self, name, **params):
 		return name.to_c()
 	
@@ -228,7 +244,7 @@ class CTranslator:
 		return name.to_c()
 
 
-class CppTranslator:
+class CppTranslator(Translator):
 	def translate_class_name(self, name, recursive=False, topAncestor=None):
 		if name.prev is None or not recursive or name.prev is topAncestor:
 			return name.to_camel_case()

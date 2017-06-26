@@ -726,7 +726,23 @@ class CParser(object):
 			raise Error('could not find type in \'{0}\''.format(cDecl))
 
 
-class CLikeLangTranslator:
+class Translator:
+	instances = {}
+	
+	@staticmethod
+	def get(langCode):
+		try:
+			if langCode not in Translator.instances:
+				className = langCode + 'LangTranslator'
+				_class = globals()[className]
+				Translator.instances[langCode] = _class()
+			
+			return Translator.instances[langCode]
+		except KeyError:
+			raise ValueError("Invalid language code: '{0}'".format(langCode))
+
+
+class CLikeLangTranslator(Translator):
 	def translate_enumerator_value(self, value):
 		if value is None:
 			return None
@@ -743,7 +759,7 @@ class CLikeLangTranslator:
 
 class CLangTranslator(CLikeLangTranslator):
 	def __init__(self):
-		self.nameTranslator = metaname.CTranslator()
+		self.nameTranslator = metaname.Translator.get('C')
 	
 	def translate_base_type(self, _type):
 		return _type.cDecl
@@ -785,7 +801,7 @@ class CLangTranslator(CLikeLangTranslator):
 
 class CppLangTranslator(CLikeLangTranslator):
 	def __init__(self):
-		self.nameTranslator = metaname.CppTranslator()
+		self.nameTranslator = metaname.Translator.get('Cpp')
 		self.ambigousTypes = []
 	
 	def translate_base_type(self, _type, **params):

@@ -104,9 +104,9 @@ class Parser:
 
 
 class Translator:
-	def __init__(self, nameTranslator):
+	def __init__(self, langCode):
 		self.textWidth = 80
-		self.nameTranslator = nameTranslator
+		self.nameTranslator = metaname.Translator.get(langCode)
 	
 	def translate_description(self, description):
 		if description is None:
@@ -193,15 +193,15 @@ class DoxygenTranslator(Translator):
 
 
 class SphinxTranslator(Translator):
-	def __init__(self, nameTranslator):
-		Translator.__init__(self, nameTranslator)
-		if isinstance(nameTranslator, metaname.CTranslator):
+	def __init__(self, langCode):
+		Translator.__init__(self, langCode)
+		if isinstance(self.nameTranslator, metaname.CTranslator):
 			self.namespace = 'c'
 			self.classDeclarator = 'type'
 			self.methodDeclarator = 'function'
 			self.enumDeclarator = 'type'
 			self.enumeratorDeclarator = 'var'
-		elif isinstance(nameTranslator, metaname.CppTranslator):
+		elif isinstance(self.nameTranslator, metaname.CppTranslator):
 			self.namespace = 'cpp'
 			self.classDeclarator = 'class'
 			self.methodDeclarator = 'function'
