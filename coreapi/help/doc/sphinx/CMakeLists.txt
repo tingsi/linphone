@@ -21,8 +21,8 @@
 ############################################################################
 
 if (ENABLE_DOC)
-	file(COPY source DESTINATION .)
 	configure_file(conf.py.in source/conf.py)
+	configure_file(source/index.rst source/index.rst COPYONLY)
 	add_custom_target(sphinx-doc ALL ${PYTHON_EXECUTABLE} '${CMAKE_CURRENT_SOURCE_DIR}/gendoc.py' '${LINPHONE_DOXYGEN_XML_DIR}' -o 'source'
 		COMMAND ${PYTHON_EXECUTABLE} -msphinx -M html 'source' 'build'
 		DEPENDS linphone-doc

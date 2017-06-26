@@ -7,9 +7,10 @@ Welcome to Linphone API's documentation!
 ========================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
    
+   c/index.rst
    cpp/index.rst
 
 
