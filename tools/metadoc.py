@@ -201,14 +201,13 @@ class SphinxTranslator(Translator):
 			self.methodDeclarator = 'function'
 			self.enumDeclarator = 'type'
 			self.enumeratorDeclarator = 'var'
-			self.needNamespace = False
 		elif isinstance(nameTranslator, metaname.CppTranslator):
 			self.namespace = 'cpp'
 			self.classDeclarator = 'class'
 			self.methodDeclarator = 'function'
 			self.enumDeclarator = 'enum'
 			self.enumeratorDeclarator = 'enumerator'
-			self.needNamespace = True
+			self.namespaceDeclarator = 'namespace'
 		else:
 			TypeError('not suppored name translator: ' + str(nameTranslator))
 		

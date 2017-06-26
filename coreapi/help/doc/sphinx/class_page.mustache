@@ -12,9 +12,9 @@
 Public methods
 ==============
 
-{{#needNamespace}}
+{{#hasNamespaceDeclarator}}
 .. {{#write_declarator}}namespace{{/write_declarator}}:: {{{fullClassName}}}
-{{/needNamespace}}
+{{/hasNamespaceDeclarator}}
 
 {{#methods}}
 .. {{#write_declarator}}method{{/write_declarator}}:: {{{prototype}}}
@@ -32,9 +32,9 @@ Public methods
 Class methods
 =============
 
-{{#needNamespace}}
+{{#hasNamespaceDeclarator}}
 .. {{#write_declarator}}namespace{{/write_declarator}}:: {{{fullClassName}}}
-{{/needNamespace}}
+{{/hasNamespaceDeclarator}}
 
 {{#classMethods}}
 .. {{#write_declarator}}method{{/write_declarator}}:: static {{{prototype}}}

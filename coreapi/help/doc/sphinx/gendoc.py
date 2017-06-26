@@ -52,6 +52,11 @@ class SphinxPage(object):
 		self._init_translation_info(language)
 		self.filename = filename
 	
+	def _get_namespace_declararor_existence(self):
+		return 'namespaceDeclarator' in dir(self.docTranslator)
+	
+	hasNamespaceDeclarator = property(fget=_get_namespace_declararor_existence)
+	
 	def make_chapter(self):
 		return lambda text: RstTools.make_chapter(pystache.render(text, self))
 	
