@@ -213,7 +213,7 @@ class SphinxTranslator(Translator):
 			self.enumeratorDeclarator = 'enumerator'
 			self.namespaceDeclarator = 'namespace'
 		else:
-			TypeError('not suppored name translator: ' + str(nameTranslator))
+			TypeError('not suppored name translator: ' + str(self.nameTranslator))
 		
 		self.methodReferencer = 'func'
 	
