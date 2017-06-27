@@ -26,6 +26,9 @@ class Reference:
 	def __init__(self, cname):
 		self.cname = cname
 		self.relatedObject = None
+	
+	def translate(self, docTranslator, **params):
+		return docTranslator.translate_reference(self, **params)
 
 
 class ClassReference(Reference):
@@ -127,6 +130,12 @@ class Translator:
 			
 		return translatedDoc
 	
+	def translate_reference(self, ref, **params):
+		if isinstance(ref, FunctionReference):
+			return ref.cname + '()'
+		else:
+			return ref.cname
+	
 	def _translate_paragraph(self, para):
 		strPara = ''
 		for part in para.parts:
@@ -134,20 +143,14 @@ class Translator:
 				strPara += part
 			elif isinstance(part, Reference):
 				try:
-					strPara += self._translate_reference(part)
+					strPara += self.translate_reference(part)
 				except ReferenceTranslationError as e:
 					print('could not translate one reference in docstrings ({0})'.format(e.args[0]))
-					strPara += Translator._translate_reference(self, part)
+					strPara += Translator.translate_reference(self, part)
 			else:
 				raise TypeError('untranslatable paragraph element ({0})'.format(part))
 		
 		return strPara
-	
-	def _translate_reference(self, ref):
-		if isinstance(ref, FunctionReference):
-			return ref.cname + '()'
-		else:
-			return ref.cname
 	
 	def _crop_text(self, inputLines, width):
 		outputLines = []
@@ -183,7 +186,7 @@ class DoxygenTranslator(Translator):
 		if len(lines) > 0:
 			lines[0] = '@brief ' + lines[0]
 	
-	def _translate_reference(self, ref):
+	def translate_reference(self, ref, **params):
 		if isinstance(ref.relatedObject, (abstractapi.Class, abstractapi.Enum)):
 			return '#' + ref.relatedObject.name.translate(self.nameTranslator, recursive=True)
 		elif isinstance(ref.relatedObject, abstractapi.Method):
@@ -201,6 +204,7 @@ class SphinxTranslator(Translator):
 			self.methodDeclarator = 'function'
 			self.enumDeclarator = 'type'
 			self.enumeratorDeclarator = 'var'
+			self.enumeratorReferencer = 'data'
 		elif isinstance(self.nameTranslator, metaname.CppTranslator):
 			self.namespace = 'cpp'
 			self.classDeclarator = 'class'
@@ -232,14 +236,20 @@ class SphinxTranslator(Translator):
 		except AttributeError:
 			raise ValueError("'{0}' referencer type not supported".format(typeName))
 	
-	def _translate_reference(self, ref):
-		if ref.relatedObject is not None:
-			return ':{tag}:`{ref}`'.format(
-				tag=self._sphinx_ref_tag(ref),
-				ref=ref.relatedObject.name.translate(self.nameTranslator, recursive=True)
-			)
-		else:
+	def translate_reference(self, ref, label=None):
+		if ref.relatedObject is None:
 			raise ReferenceTranslationError(ref.cname)
+		
+		if label is None:
+			pattern = ':{tag}:`{ref}`'
+		else:
+			pattern = ':{tag}:`{label} <{ref}>`'
+		
+		return pattern.format(
+			tag=self._sphinx_ref_tag(ref),
+			ref=ref.relatedObject.name.translate(self.nameTranslator, recursive=True),
+			label=label
+		)
 	
 	def _sphinx_ref_tag(self, ref):
 		typeName = type(ref.relatedObject).__name__.lower()

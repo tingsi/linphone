@@ -51,6 +51,7 @@ class LangInfo:
 		self.displayName = LangInfo._lang_code_to_display_name(langCode)
 		self.nameTranslator = metaname.Translator.get(langCode)
 		self.langTranslator = abstractapi.Translator.get(langCode)
+		self.docTranslator = metadoc.SphinxTranslator(langCode)
 	
 	@staticmethod
 	def _lang_code_to_display_name(langCode):
@@ -63,14 +64,14 @@ class LangInfo:
 
 
 class SphinxPage(object):
-	def __init__(self, lang, filename):
+	def __init__(self, lang, langs, filename):
 		object.__init__(self)
 		self.lang = lang
-		self.docTranslator = metadoc.SphinxTranslator(lang.langCode)
+		self.langs = langs
 		self.filename = filename
 	
 	def _get_namespace_declararor_existence(self):
-		return 'namespaceDeclarator' in dir(self.docTranslator)
+		return ('namespaceDeclarator' in dir(self.docTranslator))
 	
 	hasNamespaceDeclarator = property(fget=_get_namespace_declararor_existence)
 	
@@ -78,6 +79,11 @@ class SphinxPage(object):
 		return self.lang.displayName
 	
 	language = property(fget=_get_language)
+	
+	def _get_current_doc_translator(self):
+		return self.lang.docTranslator
+	
+	docTranslator = property(fget=_get_current_doc_translator)
 	
 	def make_chapter(self):
 		return lambda text: RstTools.make_chapter(pystache.render(text, self))
@@ -94,14 +100,32 @@ class SphinxPage(object):
 		with open(filepath, mode='w') as f:
 			f.write(r.render(self))
 	
+	def _get_translated_namespace(self, obj):
+		namespace = obj.find_first_ancestor_by_type(abstractapi.Namespace)
+		return namespace.name.translate(self.lang.nameTranslator, recursive=True)
+	
+	def _make_selector(self, obj):
+		links = []
+		ref = metadoc.Reference(None)
+		ref.relatedObject = obj
+		for lang in self.langs:
+			if lang is self.lang:
+				link = lang.displayName
+			else:
+				link = ref.translate(lang.docTranslator, label=lang.displayName)
+			
+			links.append(link)
+		
+		return ' '.join(links)
+	
 	@staticmethod
 	def _classname_to_filename(classname):
 		return classname.to_snake_case(fullName=True) + '.rst'
 
 
 class IndexPage(SphinxPage):
-	def __init__(self, lang):
-		SphinxPage.__init__(self, lang, 'index.rst')
+	def __init__(self, lang, langs):
+		SphinxPage.__init__(self, lang, langs, 'index.rst')
 		self.tocEntries = []
 	
 	def add_class_entry(self, _class):
@@ -109,8 +133,8 @@ class IndexPage(SphinxPage):
 
 
 class EnumsPage(SphinxPage):
-	def __init__(self, lang, enums):
-		SphinxPage.__init__(self, lang, 'enums.rst')
+	def __init__(self, lang, langs, enums):
+		SphinxPage.__init__(self, lang, langs, 'enums.rst')
 		self._translate_enums(enums)
 	
 	def _translate_enums(self, enums):
@@ -119,8 +143,10 @@ class EnumsPage(SphinxPage):
 			translatedEnum = {
 				'name'         : enum.name.translate(self.lang.nameTranslator),
 				'fullName'     : enum.name.translate(self.lang.nameTranslator, recursive=True),
+				'namespace'    : self._get_translated_namespace(enum),
 				'briefDesc'    : enum.briefDescription.translate(self.docTranslator),
-				'enumerators'  : self._translate_enum_values(enum)
+				'enumerators'  : self._translate_enum_values(enum),
+				'selector'    : self._make_selector(enum)
 			}
 			translatedEnum['sectionName'] = RstTools.make_section(translatedEnum['name'])
 			self.enums.append(translatedEnum)
@@ -131,7 +157,8 @@ class EnumsPage(SphinxPage):
 			translatedValue = {
 				'name'      : enumerator.name.translate(self.lang.nameTranslator),
 				'briefDesc' : enumerator.briefDescription.translate(self.docTranslator),
-				'value'     : enumerator.translate_value(self.lang.langTranslator)
+				'value'     : enumerator.translate_value(self.lang.langTranslator),
+				'selector' : self._make_selector(enumerator)
 			}
 			translatedEnumerators.append(translatedValue)
 		
@@ -139,15 +166,16 @@ class EnumsPage(SphinxPage):
 
 
 class ClassPage(SphinxPage):
-	def __init__(self, _class, lang):
+	def __init__(self, _class, lang, langs):
 		filename = SphinxPage._classname_to_filename(_class.name)
-		SphinxPage.__init__(self, lang, filename)
+		SphinxPage.__init__(self, lang, langs, filename)
 		self.namespace = self._get_translated_namespace(_class)
 		self.className = _class.name.translate(self.lang.nameTranslator)
 		self.fullClassName = _class.name.translate(self.lang.nameTranslator, recursive=True)
 		self.classBrief = _class.briefDescription.translate(self.docTranslator)
 		self.methods = self._translate_methods(_class.instanceMethods)
 		self.classMethods = self._translate_methods(_class.classMethods)
+		self.selector = self._make_selector(_class)
 	
 	def _has_methods(self):
 		return len(self.methods) > 0
@@ -158,16 +186,13 @@ class ClassPage(SphinxPage):
 	hasMethods = property(fget=_has_methods)
 	hasClassMethods = property(fget=_has_class_methods)
 	
-	def _get_translated_namespace(self, _class):
-		namespace = _class.find_first_ancestor_by_type(abstractapi.Namespace)
-		return namespace.name.translate(self.lang.nameTranslator, recursive=True)
-	
 	def _translate_methods(self, methods):
 		translatedMethods = []
 		for method in methods:
 			methAttr = {
 				'prototype' : method.translate_as_prototype(self.lang.langTranslator),
-				'brief'     : method.briefDescription.translate(self.docTranslator)
+				'brief'     : method.briefDescription.translate(self.docTranslator),
+				'selector' : self._make_selector(method)
 			}
 			translatedMethods.append(methAttr)
 		return translatedMethods
@@ -188,12 +213,12 @@ class DocGenerator:
 			if not os.path.exists(directory):
 				os.mkdir(directory)
 			
-			enumsPage = EnumsPage(lang, absApiParser.enumsIndex.values())
+			enumsPage = EnumsPage(lang, self.languages, absApiParser.enumsIndex.values())
 			enumsPage.write(directory)
 			
-			indexPage = IndexPage(lang)
+			indexPage = IndexPage(lang, self.languages)
 			for _class in absApiParser.classesIndex.values():
-				page = ClassPage(_class, lang)
+				page = ClassPage(_class, lang, self.languages)
 				page.write(directory)
 				indexPage.add_class_entry(_class)
 			

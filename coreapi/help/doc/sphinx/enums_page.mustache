@@ -9,6 +9,12 @@
 	{{/lines}}
 	{{/briefDesc}}
 	
+	{{{selector}}}
+	
+	{{#hasNamespaceDeclarator}}
+	.. {{#write_declarator}}namespace{{/write_declarator}}:: {{{namespace}}}
+	{{/hasNamespaceDeclarator}}
+	
 	{{#enumerators}}
 	.. {{#write_declarator}}enumerator{{/write_declarator}}:: {{{name}}}{{#value}} = {{{value}}}{{/value}}
 		
@@ -17,6 +23,8 @@
 		{{{line}}}
 		{{/lines}}
 		{{/briefDesc}}
+		
+		{{{selector}}}
 	
 	{{/enumerators}}
 {{/enums}}
