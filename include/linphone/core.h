@@ -986,9 +986,11 @@ LINPHONE_PUBLIC void linphone_core_set_user_agent(LinphoneCore *lc, const char *
 LINPHONE_PUBLIC LinphoneAddress * linphone_core_interpret_url(LinphoneCore *lc, const char *url);
 
 /**
- * Initiates an outgoing call
+ * @brief Initiates an outgoing call.
+ * 
  * The application doesn't own a reference to the returned LinphoneCall object.
  * Use linphone_call_ref() to safely keep the LinphoneCall pointer valid within your application.
+ * 
  * @param[in] lc LinphoneCore object
  * @param[in] url The destination of the call (sip address, or phone number).
  * @return A LinphoneCall object or NULL in case of failure
