@@ -461,11 +461,17 @@ class CParser(object):
 	
 	def _fix_all_docs(self):
 		for _class in self.classesIndex.values():
-			if _class.briefDescription is not None:
-				_class.briefDescription.resolve_all_references(self)
+			self._fix_doc(_class)
+		for enum in self.enumsIndex.values():
+			self._fix_doc(enum)
 		for method in self.methodsIndex.values():
-			if method.briefDescription is not None:
-				method.briefDescription.resolve_all_references(self)
+			self._fix_doc(method)
+	
+	def _fix_doc(self, obj):
+		if obj.briefDescription is not None:
+			obj.briefDescription.resolve_all_references(self)
+		if obj.detailedDescription is not None:
+			obj.detailedDescription.resolve_all_references(self)
 	
 	def parse_enum(self, cenum):
 		if 'associatedTypedef' in dir(cenum):
@@ -477,6 +483,7 @@ class CParser(object):
 		name.from_camel_case(nameStr, namespace=self.namespace.name)
 		enum = Enum(name)
 		enum.briefDescription = cenum.briefDoc
+		enum.detailedDescription = cenum.detailedDoc
 		self.namespace.add_child(enum)
 		
 		for cEnumValue in cenum.values:
@@ -484,6 +491,7 @@ class CParser(object):
 			valueName.from_camel_case(cEnumValue.name, namespace=name)
 			aEnumValue = Enumerator(valueName)
 			aEnumValue.briefDescription = cEnumValue.briefDoc
+			aEnumValue.detailedDescription = cEnumValue.detailedDoc
 			if cEnumValue.value is not None:
 				try:
 					aEnumValue.value_from_string(cEnumValue.value)
@@ -512,6 +520,7 @@ class CParser(object):
 		name.from_camel_case(cclass.name, namespace=self.namespace.name)
 		_class = Class(name)
 		_class.briefDescription = cclass.briefDoc
+		_class.detailedDescription = cclass.detailedDoc
 		_class.refcountable = self._class_is_refcountable(cclass)
 		
 		for cproperty in cclass.properties.values():
@@ -580,6 +589,7 @@ class CParser(object):
 		
 		listener = Interface(name)
 		listener.briefDescription = cclass.briefDoc
+		listener.detailedDescription = cclass.detailedDoc
 		
 		for property in cclass.properties.values():
 			if property.name != 'user_data':
@@ -628,6 +638,7 @@ class CParser(object):
 		
 		method = Method(name, type=type)
 		method.briefDescription = cfunction.briefDoc
+		method.detailedDescription = cfunction.detailedDoc
 		method.deprecated = cfunction.deprecated
 		method.returnType = self.parse_type(cfunction.returnArgument)
 		

@@ -65,8 +65,8 @@ class Description:
 		for paragraph in self.paragraphs:
 			paragraph.resolve_all_references(api)
 	
-	def translate(self, translator):
-		return translator.translate_description(self)
+	def translate(self, translator, **kargs):
+		return translator.translate_description(self, **kargs)
 
 
 class Parser:
@@ -111,7 +111,7 @@ class Translator:
 		self.textWidth = 80
 		self.nameTranslator = metaname.Translator.get(langCode)
 	
-	def translate_description(self, description):
+	def translate_description(self, description, **kargs):
 		if description is None:
 			return None
 		
@@ -119,7 +119,7 @@ class Translator:
 		for para in description.paragraphs:
 			if para is not description.paragraphs[0]:
 				lines.append('')
-			lines.append(self._translate_paragraph(para))
+			lines.append(self._translate_paragraph(para, **kargs))
 		
 		self._tag_as_brief(lines)
 		lines = self._crop_text(lines, self.textWidth)
@@ -130,23 +130,23 @@ class Translator:
 			
 		return translatedDoc
 	
-	def translate_reference(self, ref, **params):
+	def translate_reference(self, ref, **kargs):
 		if isinstance(ref, FunctionReference):
 			return ref.cname + '()'
 		else:
 			return ref.cname
 	
-	def _translate_paragraph(self, para):
+	def _translate_paragraph(self, para, **kargs):
 		strPara = ''
 		for part in para.parts:
 			if isinstance(part, str):
 				strPara += part
 			elif isinstance(part, Reference):
 				try:
-					strPara += self.translate_reference(part)
+					strPara += self.translate_reference(part, **kargs)
 				except ReferenceTranslationError as e:
 					print('could not translate one reference in docstrings ({0})'.format(e.args[0]))
-					strPara += Translator.translate_reference(self, part)
+					strPara += Translator.translate_reference(self, part, **kargs)
 			else:
 				raise TypeError('untranslatable paragraph element ({0})'.format(part))
 		
@@ -186,7 +186,7 @@ class DoxygenTranslator(Translator):
 		if len(lines) > 0:
 			lines[0] = '@brief ' + lines[0]
 	
-	def translate_reference(self, ref, **params):
+	def translate_reference(self, ref, **kargs):
 		if isinstance(ref.relatedObject, (abstractapi.Class, abstractapi.Enum)):
 			return '#' + ref.relatedObject.name.translate(self.nameTranslator, recursive=True)
 		elif isinstance(ref.relatedObject, abstractapi.Method):
@@ -236,19 +236,19 @@ class SphinxTranslator(Translator):
 		except AttributeError:
 			raise ValueError("'{0}' referencer type not supported".format(typeName))
 	
-	def translate_reference(self, ref, label=None):
+	def translate_reference(self, ref, label=None, namespace=None):
 		if ref.relatedObject is None:
 			raise ReferenceTranslationError(ref.cname)
 		
-		if label is None:
-			pattern = ':{tag}:`{ref}`'
-		else:
-			pattern = ':{tag}:`{label} <{ref}>`'
+		commonName = metaname.Name.find_common_parent(ref.relatedObject.name, namespace) if namespace is not None else None
+		_label = label if label is not None else ref.relatedObject.name.translate(self.nameTranslator, recursive=True, topAncestor=commonName)
+		if isinstance(ref, FunctionReference):
+			_label += '()'
 		
-		return pattern.format(
+		return ':{tag}:`{label} <{ref}>`'.format(
 			tag=self._sphinx_ref_tag(ref),
 			ref=ref.relatedObject.name.translate(self.nameTranslator, recursive=True),
-			label=label
+			label=_label
 		)
 	
 	def _sphinx_ref_tag(self, ref):

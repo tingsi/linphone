@@ -2,11 +2,17 @@
 
 .. {{#write_declarator}}class{{/write_declarator}}:: {{{fullClassName}}}
 	
-	{{#classBrief}}
+	{{#briefDoc}}
 	{{#lines}}
 	{{{line}}}
 	{{/lines}}
-	{{/classBrief}}
+	{{/briefDoc}}
+	
+	{{#detailedDoc}}
+	{{#lines}}
+	{{{line}}}
+	{{/lines}}
+	{{/detailedDoc}}
 	
 	{{{selector}}}
 
@@ -21,11 +27,17 @@ Public methods
 {{#methods}}
 .. {{#write_declarator}}method{{/write_declarator}}:: {{{prototype}}}
 	
-	{{#brief}}
+	{{#briefDoc}}
 	{{#lines}}
 	{{{line}}}
 	{{/lines}}
-	{{/brief}}
+	{{/briefDoc}}
+	
+	{{#detailedDoc}}
+	{{#lines}}
+	{{{line}}}
+	{{/lines}}
+	{{/detailedDoc}}
 	
 	{{{selector}}}
 

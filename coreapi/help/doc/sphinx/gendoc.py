@@ -172,9 +172,10 @@ class ClassPage(SphinxPage):
 		self.namespace = self._get_translated_namespace(_class)
 		self.className = _class.name.translate(self.lang.nameTranslator)
 		self.fullClassName = _class.name.translate(self.lang.nameTranslator, recursive=True)
-		self.classBrief = _class.briefDescription.translate(self.docTranslator)
-		self.methods = self._translate_methods(_class.instanceMethods)
-		self.classMethods = self._translate_methods(_class.classMethods)
+		self.briefDoc = _class.briefDescription.translate(self.docTranslator, namespace=_class.name)
+		self.detailedDoc = _class.detailedDescription.translate(self.docTranslator, namespace=_class.name) if _class.detailedDescription is not None else None
+		self.methods = self._translate_methods(_class.instanceMethods, namespace=_class.name)
+		self.classMethods = self._translate_methods(_class.classMethods, namespace=_class.name)
 		self.selector = self._make_selector(_class)
 	
 	def _has_methods(self):
@@ -186,13 +187,14 @@ class ClassPage(SphinxPage):
 	hasMethods = property(fget=_has_methods)
 	hasClassMethods = property(fget=_has_class_methods)
 	
-	def _translate_methods(self, methods):
+	def _translate_methods(self, methods, **kargs):
 		translatedMethods = []
 		for method in methods:
 			methAttr = {
-				'prototype' : method.translate_as_prototype(self.lang.langTranslator),
-				'brief'     : method.briefDescription.translate(self.docTranslator),
-				'selector' : self._make_selector(method)
+				'prototype'    : method.translate_as_prototype(self.lang.langTranslator),
+				'briefDoc'     : method.briefDescription.translate(self.docTranslator, **kargs),
+				'detailedDoc'  : method.detailedDescription.translate(self.docTranslator, **kargs),
+				'selector'     : self._make_selector(method)
 			}
 			translatedMethods.append(methAttr)
 		return translatedMethods
