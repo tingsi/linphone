@@ -55,6 +55,18 @@ class Paragraph:
 		for part in self.parts:
 			if isinstance(part, Reference):
 				part.resolve(api)
+	
+	def translate(self, docTranslator, **kargs):
+		return docTranslator._translate_paragraph(self, **kargs)
+
+
+class Section:
+	def __init__(self, kind):
+		self.kind = kind
+		self.paragraph = None
+	
+	def translate(self, docTranslator, **kargs):
+		return docTranslator._translate_section(self, **kargs)
 
 
 class Description:
@@ -73,31 +85,41 @@ class Parser:
 	def parse_description(self, node):
 		desc = Description()
 		for paraNode in node.findall('./para'):
-			desc.paragraphs.append(self._parse_paragraph(paraNode))
+			paragraph = self._parse_paragraph(paraNode)
+			if paragraph is not None:
+				desc.paragraphs.append(paragraph)
 		return desc
 	
 	def _parse_paragraph(self, node):
 		paragraph = Paragraph()
-		for partNode in node.iter():
-			if partNode is node:
+		
+		text = node.text
+		if text is not None:
+			paragraph.parts.append(text)
+		
+		for partNode in node.findall('*'):
+			if partNode.tag == 'ref':
+				ref = self._parse_reference(partNode)
+				if ref is not None:
+					paragraph.parts.append(ref)
+			elif partNode.tag == 'simplesect':
+				paragraph.parts.append(self._parse_simple_section(partNode))
+			else:
 				text = partNode.text
 				if text is not None:
 					paragraph.parts.append(text)
-			else:
-				if partNode.tag == 'ref':
-					ref = self._parse_reference(partNode)
-					if ref is not None:
-						paragraph.parts.append(ref)
-				else:
-					text = partNode.text
-					if text is not None:
-						paragraph.parts.append(text)
-				
-				tail = partNode.tail
-				if tail is not None:
-					paragraph.parts.append(tail)
+			
+			text = partNode.tail
+			if text is not None:
+				paragraph.parts.append(text)
 		
 		return paragraph
+	
+	def _parse_simple_section(self, sectionNode):
+		section = Section(sectionNode.get('kind'))
+		para = sectionNode.find('./para')
+		section.paragraph = self._parse_paragraph(para)
+		return section
 	
 	def _parse_reference(self, node):
 		if node.text.endswith('()'):
@@ -115,12 +137,11 @@ class Translator:
 		if description is None:
 			return None
 		
-		lines = []
+		paras = []
 		for para in description.paragraphs:
-			if para is not description.paragraphs[0]:
-				lines.append('')
-			lines.append(self._translate_paragraph(para, **kargs))
+			paras.append(para.translate(self, **kargs))
 		
+		lines = self._paragraphs_to_lines(paras)
 		self._tag_as_brief(lines)
 		lines = self._crop_text(lines, self.textWidth)
 		
@@ -130,27 +151,26 @@ class Translator:
 			
 		return translatedDoc
 	
-	def translate_reference(self, ref, **kargs):
-		if isinstance(ref, FunctionReference):
-			return ref.cname + '()'
-		else:
-			return ref.cname
-	
 	def _translate_paragraph(self, para, **kargs):
 		strPara = ''
 		for part in para.parts:
-			if isinstance(part, str):
-				strPara += part
-			elif isinstance(part, Reference):
-				try:
-					strPara += self.translate_reference(part, **kargs)
-				except ReferenceTranslationError as e:
-					print('could not translate one reference in docstrings ({0})'.format(e.args[0]))
-					strPara += Translator.translate_reference(self, part, **kargs)
-			else:
-				raise TypeError('untranslatable paragraph element ({0})'.format(part))
+			try:
+				if isinstance(part, str):
+					strPara += part
+				else:
+					strPara += part.translate(self, **kargs)
+			except TranslationError as e:
+				print('error: {0}'.format(e.msg()))
 		
 		return strPara
+	
+	def _paragraphs_to_lines(self, paragraphs):
+		lines = []
+		for para in paragraphs:
+			if para is not paragraphs[0]:
+				lines.append('')
+			lines += para.split(sep='\n')
+		return lines
 	
 	def _crop_text(self, inputLines, width):
 		outputLines = []
@@ -159,6 +179,11 @@ class Translator:
 		return outputLines
 	
 	def _split_line(self, line, width):
+		firstNonTab = next((c for c in line if c != '\t'), None)
+		tabCount = line.index(firstNonTab) if firstNonTab is not None else 0
+		linePrefix = ('\t' * tabCount)
+		line = line[tabCount:]
+		
 		lines = []
 		while len(line) > width:
 			cutIndex = line.rfind(' ', 0, width)
@@ -171,14 +196,23 @@ class Translator:
 				line = line[cutIndex:]
 		
 		lines.append(line)
-		return lines
+		
+		return [linePrefix + line for line in lines]
 	
 	def _tag_as_brief(self, lines):
 		pass
 
 
-class ReferenceTranslationError(RuntimeError):
+class TranslationError(Exception):
 	pass
+
+
+class ReferenceTranslationError(TranslationError):
+	def __init__(self, refName):
+		Exception.__init__(self, refName)
+	
+	def msg(self):
+		return '{0} reference could not been translated'.format(self.args[0])
 
 
 class DoxygenTranslator(Translator):
@@ -193,6 +227,12 @@ class DoxygenTranslator(Translator):
 			return ref.relatedObject.name.translate(self.nameTranslator, recursive=True) + '()'
 		else:
 			raise ReferenceTranslationError(ref.cname)
+	
+	def _translate_section(self, section, **kargs):
+		return '@{0} {1}'.format(
+			section.kind,
+			self._translate_paragraph(section.paragraph, **kargs)
+		)
 
 
 class SphinxTranslator(Translator):
@@ -250,6 +290,14 @@ class SphinxTranslator(Translator):
 			ref=ref.relatedObject.name.translate(self.nameTranslator, recursive=True),
 			label=_label
 		)
+	
+	def _translate_section(self, section, **kargs):
+		strPara = self._translate_paragraph(section.paragraph, **kargs)
+		if section.kind == 'see':
+			kind = 'seealso'
+		else:
+			kind = section.kind
+		return '.. {0}::\n\t\n\t{1}'.format(kind, strPara)
 	
 	def _sphinx_ref_tag(self, ref):
 		typeName = type(ref.relatedObject).__name__.lower()
