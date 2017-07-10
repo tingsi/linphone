@@ -36,10 +36,10 @@ class CppTranslator(object):
 	
 	def __init__(self):
 		self.ambigousTypes = ['LinphonePayloadType']
-		self.nameTranslator = metaname.CppTranslator()
-		self.langTranslator = AbsApi.CppLangTranslator()
+		self.nameTranslator = metaname.Translator.get('Cpp')
+		self.langTranslator = AbsApi.Translator.get('Cpp')
 		self.langTranslator.ambigousTypes.append('LinphonePayloadType')
-		self.docTranslator = metadoc.DoxygenTranslator(self.nameTranslator)
+		self.docTranslator = metadoc.DoxygenTranslator('Cpp')
 	
 	def is_ambigous_type(self, _type):
 		return _type.name in self.ambigousTypes or (_type.name == 'list' and self.is_ambigous_type(_type.containedTypeDesc))
@@ -144,10 +144,10 @@ class CppTranslator(object):
 		args = []
 		wrappedArgs = []
 		for arg in method.args:
-			args.append(arg.type.cname + ' ' + arg.name.to_c())
+			args.append(arg.type.cDecl + ' ' + arg.name.to_c())
 			wrappedArgs.append(self._wrap_c_expression_to_cpp(arg.name.to_c(), arg.type, usedNamespace=namespace))
 		params['params'] = ', '.join(args)
-		params['returnType'] = method.returnType.cname
+		params['returnType'] = method.returnType.cDecl
 		
 		wrapperCbDict = {}
 		wrapperCbDict['cbName'] = params['name']

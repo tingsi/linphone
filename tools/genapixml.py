@@ -540,6 +540,11 @@ class Project:
 		internal = node.find("./detaileddescription/internal")
 		if internal is not None:
 			return None
+		
+		# The doc must be parsed here since the XML tree is to be modified in below code
+		briefDoc = self.docparser.parse_description(node.find('./briefdescription'))
+		detailedDoc = self.docparser.parse_description(node.find('./detaileddescription'))
+		
 		missingDocWarning = ''
 		name = node.find('./name').text
 		t = ''.join(node.find('./type').itertext())
@@ -583,11 +588,11 @@ class Project:
 		if deprecatedNode is not None:
 			f.deprecated = True
 		f.briefDescription = ''.join(node.find('./briefdescription').itertext()).strip()
-		f.briefDoc = self.docparser.parse_description(node.find('./briefdescription'))
-		f.detailedDoc = self.docparser.parse_description(node.find('./detaileddescription'))
 		f.detailedDescription = self.__cleanDescription(node.find('./detaileddescription'))
 		if f.briefDescription == '' and ''.join(f.detailedDescription.itertext()).strip() == '':
 			return None
+		f.briefDoc = briefDoc
+		f.detailedDoc = detailedDoc
 		locationNode = node.find('./location')
 		if locationNode is not None:
 			f.location = locationNode.get('file')

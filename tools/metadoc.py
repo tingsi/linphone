@@ -16,6 +16,7 @@
 
 import metaname
 import abstractapi
+import re
 
 
 class Nil:
@@ -55,6 +56,8 @@ class Paragraph:
 		for part in self.parts:
 			if isinstance(part, Reference):
 				part.resolve(api)
+			elif isinstance(part, (Section, ParameterList)):
+				part.resolve_all_references(api)
 	
 	def translate(self, docTranslator, **kargs):
 		return docTranslator._translate_paragraph(self, **kargs)
@@ -65,8 +68,31 @@ class Section:
 		self.kind = kind
 		self.paragraph = None
 	
+	def resolve_all_references(self, api):
+		if self.paragraph is not None:
+			self.paragraph.resolve_all_references(api)
+	
 	def translate(self, docTranslator, **kargs):
 		return docTranslator._translate_section(self, **kargs)
+
+
+class ParameterDescription:
+	def __init__(self, name, desc):
+		self.name = name
+		self.desc = desc
+
+
+class ParameterList:
+	def __init__(self):
+		self.parameters = []
+	
+	def resolve_all_references(self, api):
+		for parameter in self.parameters:
+			if parameter.desc is not None:
+				parameter.desc.resolve_all_references(api)
+	
+	def translate(self, docTranslator, **kargs):
+		return docTranslator._translate_parameter_list(self, **kargs)
 
 
 class Description:
@@ -83,6 +109,9 @@ class Description:
 
 class Parser:
 	def parse_description(self, node):
+		if node is None:
+			return None
+		
 		desc = Description()
 		for paraNode in node.findall('./para'):
 			paragraph = self._parse_paragraph(paraNode)
@@ -104,6 +133,8 @@ class Parser:
 					paragraph.parts.append(ref)
 			elif partNode.tag == 'simplesect':
 				paragraph.parts.append(self._parse_simple_section(partNode))
+			elif partNode.tag == 'parameterlist' and partNode.get('kind') == 'param':
+				paragraph.parts.append(self._parse_parameter_list(partNode))
 			else:
 				text = partNode.text
 				if text is not None:
@@ -121,6 +152,14 @@ class Parser:
 		section.paragraph = self._parse_paragraph(para)
 		return section
 	
+	def _parse_parameter_list(self, paramListNode):
+		paramList = ParameterList()
+		for paramItemNode in paramListNode.findall('./parameteritem'):
+			name = paramItemNode.find('./parameternamelist/parametername').text
+			desc = self.parse_description(paramItemNode.find('parameterdescription'))
+			paramList.parameters.append(ParameterDescription(name, desc))
+		return paramList
+	
 	def _parse_reference(self, node):
 		if node.text.endswith('()'):
 			return FunctionReference(node.text[0:-2])
@@ -137,9 +176,7 @@ class Translator:
 		if description is None:
 			return None
 		
-		paras = []
-		for para in description.paragraphs:
-			paras.append(para.translate(self, **kargs))
+		paras = self._translate_description(description, **kargs)
 		
 		lines = self._paragraphs_to_lines(paras)
 		self._tag_as_brief(lines)
@@ -148,8 +185,14 @@ class Translator:
 		translatedDoc = {'lines': []}
 		for line in lines:
 			translatedDoc['lines'].append({'line': line})
-			
+		
 		return translatedDoc
+	
+	def _translate_description(self, desc, **kargs):
+		paras = []
+		for para in desc.paragraphs:
+			paras.append(para.translate(self, **kargs))
+		return paras
 	
 	def _translate_paragraph(self, para, **kargs):
 		strPara = ''
@@ -178,7 +221,7 @@ class Translator:
 			outputLines += self._split_line(line, width)
 		return outputLines
 	
-	def _split_line(self, line, width):
+	def _split_line(self, line, width, indent=False):
 		firstNonTab = next((c for c in line if c != '\t'), None)
 		tabCount = line.index(firstNonTab) if firstNonTab is not None else 0
 		linePrefix = ('\t' * tabCount)
@@ -194,8 +237,10 @@ class Translator:
 				cutIndex = width
 				lines.append(line[0:cutIndex])
 				line = line[cutIndex:]
-		
 		lines.append(line)
+		
+		if indent:
+			lines = [line if line is lines[0] else '\t' + line for line in lines]
 		
 		return [linePrefix + line for line in lines]
 	
@@ -297,11 +342,29 @@ class SphinxTranslator(Translator):
 			kind = 'seealso'
 		else:
 			kind = section.kind
-		return '.. {0}::\n\t\n\t{1}'.format(kind, strPara)
+		
+		if section.kind == 'return':
+			return ':return: {0}'.format(strPara)
+		else:
+			return '.. {0}::\n\t\n\t{1}'.format(kind, strPara)
+	
+	def _translate_parameter_list(self, parameterList, **kargs):
+		text = ''
+		for paramDesc in parameterList.parameters:
+			desc = self._translate_description(paramDesc.desc, **kargs) if paramDesc.desc is not None else ['']
+			text += (':param {0}: {1}'.format(paramDesc.name, desc[0]))
+		return text
 	
 	def _sphinx_ref_tag(self, ref):
 		typeName = type(ref.relatedObject).__name__.lower()
 		return self.get_referencer(typeName)
+	
+	def _split_line(self, line, width):
+		if re.match('\t*:param\s+\w+:', line) is None:
+			return Translator._split_line(self, line, width)
+		else:
+			return Translator._split_line(self, line, width, indent=True)
+		
 
 
 class SandcastleCSharpTranslator(Translator):
