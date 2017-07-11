@@ -92,7 +92,8 @@ class CppTranslator(object):
 		if _class.name.to_c() == 'LinphoneCore':
 			classDict['friendClasses'].append({'name': 'Factory'});
 		
-		classDict['doc'] = _class.briefDescription.translate(self.docTranslator)
+		classDict['briefDoc'] = _class.briefDescription.translate(self.docTranslator, tagAsBrief=True)
+		classDict['detailedDoc'] = _class.detailedDescription.translate(self.docTranslator)
 		
 		if islistenable:
 			classDict['listenerClassName'] = _class.listenerInterface.name.translate(self.nameTranslator)
@@ -198,7 +199,8 @@ class CppTranslator(object):
 			'implPrototype': method.translate_as_prototype(self.langTranslator, recursive=True, topAncestor=namespace),
 			'deprecated': method.deprecated,
 			'suffix': '',
-			'doc': method.briefDescription.translate(self.docTranslator) if method.briefDescription is not None else None
+			'briefDoc': method.briefDescription.translate(self.docTranslator, tagAsBrief=True) if method.briefDescription is not None else None,
+			'detailedDoc': method.detailedDescription.translate(self.docTranslator) if method.detailedDescription is not None else None
 		}
 		
 		if type(method.parent) is AbsApi.Interface:

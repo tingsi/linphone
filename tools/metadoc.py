@@ -179,7 +179,10 @@ class Translator:
 		paras = self._translate_description(description, **kargs)
 		
 		lines = self._paragraphs_to_lines(paras)
-		self._tag_as_brief(lines)
+		
+		if 'tagAsBrief' in kargs and kargs['tagAsBrief']:
+			self._tag_as_brief(lines)
+		
 		lines = self._crop_text(lines, self.textWidth)
 		
 		translatedDoc = {'lines': []}
@@ -278,6 +281,13 @@ class DoxygenTranslator(Translator):
 			section.kind,
 			self._translate_paragraph(section.paragraph, **kargs)
 		)
+	
+	def _translate_parameter_list(self, parameterList, **kargs):
+		text = ''
+		for paramDesc in parameterList.parameters:
+			desc = self._translate_description(paramDesc.desc, **kargs) if paramDesc.desc is not None else ['']
+			text = ('@param {0} {1}'.format(paramDesc.name, desc[0]))
+		return text
 
 
 class SphinxTranslator(Translator):
@@ -352,7 +362,7 @@ class SphinxTranslator(Translator):
 		text = ''
 		for paramDesc in parameterList.parameters:
 			desc = self._translate_description(paramDesc.desc, **kargs) if paramDesc.desc is not None else ['']
-			text += (':param {0}: {1}'.format(paramDesc.name, desc[0]))
+			text = (':param {0}: {1}'.format(paramDesc.name, desc[0]))
 		return text
 	
 	def _sphinx_ref_tag(self, ref):

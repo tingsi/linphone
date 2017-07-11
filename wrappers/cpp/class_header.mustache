@@ -51,13 +51,19 @@ namespace linphone {
 	{{/priorDeclarations}}
 
 	{{#_class}}
-	{{#doc}}
 	/**
+	 {{#briefDoc}}
 	 {{#lines}}
 	 * {{{line}}}
 	 {{/lines}}
+	 {{/briefDoc}}
+	 *
+	 {{#detailedDoc}}
+	 {{#lines}}
+	 * {{{line}}}
+	 {{/lines}}
+	 {{/detailedDoc}}
 	 */
-	{{/doc}}
 	class {{className}}{{#parentClassName}}: public {{{parentClassName}}}{{/parentClassName}} {
 		{{#friendClasses}}
 		friend class {{name}};
@@ -99,13 +105,19 @@ namespace linphone {
 			
 		
 			{{#methods}}
-			{{#doc}}
 			/**
-			 {{#lines}}
+			{{#briefDoc}}
+			{{#lines}}
 			 * {{{line}}}
-			 {{/lines}}
+			{{/lines}}
+			{{/briefDoc}}
+			 *
+			{{#detailedDoc}}
+			{{#lines}}
+			 * {{{line}}}
+			{{/lines}}
+			{{/detailedDoc}}
 			 */
-			{{/doc}}
 			LINPHONECXX_PUBLIC {{#deprecated}}LINPHONECXX_DEPRECATED {{/deprecated}}{{#isListener}}virtual {{/isListener}}{{{declPrototype}}}{{{suffix}}};
 			
 			{{/methods}}
