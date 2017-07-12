@@ -1259,5 +1259,11 @@ typedef struct _LinphoneRange LinphoneRange;
  */
 typedef int LinphoneStatus;
 
+/**
+ * Object representing a chain of protocol headers.
+ * It provides read/write access to the headers of the underlying protocol.
+ * @ingroup misc
+**/
+typedef struct _LinphoneHeaders LinphoneHeaders;
 
 #endif /* LINPHONE_TYPES_H_ */

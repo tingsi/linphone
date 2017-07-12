@@ -564,26 +564,44 @@ static void linphone_core_add_local_ice_candidates(LinphoneCall *call, int famil
 	}
 }
 
-static const struct addrinfo * get_preferred_stun_server_addrinfo(const struct addrinfo *ai) {
-	char ip[NI_MAXHOST];
-	const struct addrinfo *preferred_ai = NULL;
-
+static const struct addrinfo * find_nat64_addrinfo(const struct addrinfo *ai) {
 	while (ai != NULL) {
-		bctbx_addrinfo_to_printable_ip_address(ai, ip, sizeof(ip));
-		if (ai->ai_family == AF_INET) {
-			preferred_ai = ai;
-			break;
-		}
-		else if (ai->ai_family == AF_INET6) {
+		if (ai->ai_family == AF_INET6) {
 			struct sockaddr_storage ss;
 			socklen_t sslen = sizeof(ss);
-			bctbx_sockaddr_ipv6_to_ipv4(ai->ai_addr, (struct sockaddr *)&ss, &sslen);
-			if ((ss.ss_family == AF_INET) && (preferred_ai == NULL)) preferred_ai = ai;
+			bctbx_sockaddr_remove_nat64_mapping(ai->ai_addr, (struct sockaddr *)&ss, &sslen);
+			if (ss.ss_family == AF_INET) break;
 		}
 		ai = ai->ai_next;
 	}
+	return ai;
+}
 
-	bctbx_addrinfo_to_printable_ip_address(preferred_ai, ip, sizeof(ip));
+static const struct addrinfo * find_ipv4_addrinfo(const struct addrinfo *ai) {
+	while (ai != NULL) {
+		if (ai->ai_family == AF_INET) break;
+		ai = ai->ai_next;
+	}
+	return ai;
+}
+
+static const struct addrinfo * find_ipv6_addrinfo(const struct addrinfo *ai) {
+	while (ai != NULL) {
+		if (ai->ai_family == AF_INET6) break;
+		ai = ai->ai_next;
+	}
+	return ai;
+}
+
+/**
+ * Choose the preferred IP address to use to contact the STUN server from the list of IP addresses
+ * the DNS resolution returned. If a NAT64 address is present, use it, otherwise if an IPv4 address
+ * is present, use it, otherwise use an IPv6 address if it is present.
+ */
+static const struct addrinfo * get_preferred_stun_server_addrinfo(const struct addrinfo *ai) {
+	const struct addrinfo *preferred_ai = find_nat64_addrinfo(ai);
+	if (!preferred_ai) preferred_ai = find_ipv4_addrinfo(ai);
+	if (!preferred_ai) preferred_ai = find_ipv6_addrinfo(ai);
 	return preferred_ai;
 }
 
@@ -1861,4 +1879,29 @@ void linphone_range_set_min(LinphoneRange *range, int min) {
 
 void linphone_range_set_max(LinphoneRange *range, int max) {
 	range->max = max;
+}
+
+
+
+LinphoneHeaders * linphone_headers_ref(LinphoneHeaders *obj){
+	sal_custom_header_ref((SalCustomHeader*)obj);
+	return obj;
+}
+
+
+void linphone_headers_unref(LinphoneHeaders *obj){
+	sal_custom_header_unref((SalCustomHeader*)obj);
+}
+
+
+const char* linphone_headers_get_value(LinphoneHeaders *obj, const char *header_name){
+	return sal_custom_header_find((SalCustomHeader*)obj, header_name);
+}
+
+void linphone_headers_add(LinphoneHeaders *obj, const char *name, const char *value){
+	sal_custom_header_append((SalCustomHeader*)obj, name, value);
+}
+
+void linphone_headers_remove(LinphoneHeaders *obj, const char *name){
+	sal_custom_header_remove((SalCustomHeader*)obj, name);
 }

@@ -668,7 +668,7 @@ LinphoneReason linphone_core_message_received(LinphoneCore *lc, SalOp *op, const
 	cr = linphone_core_get_chat_room(lc, addr);
 
 	/* Check if this is a duplicate message */
-	if (linphone_chat_room_find_message(cr, sal_op_get_call_id(op)) != NULL) {
+	if ((msg = linphone_chat_room_find_message_with_dir(cr, sal_op_get_call_id(op), LinphoneChatMessageIncoming))) {
 		reason = lc->chat_deny_code;
 		goto end;
 	}
@@ -750,6 +750,10 @@ LinphoneReason linphone_core_message_received(LinphoneCore *lc, SalOp *op, const
 			cr->unread_count = 1;
 		else
 			cr->unread_count++;
+		/* Mark the message as pending so that if linphone_core_chat_room_mark_as_read() is called
+		   in the linphone_chat_room_message_received() callback, it will effectively be marked as
+		   being read before being stored. */
+		cr->pending_message = msg;
 	}
 
 	linphone_chat_room_message_received(cr, lc, msg);
@@ -757,6 +761,8 @@ LinphoneReason linphone_core_message_received(LinphoneCore *lc, SalOp *op, const
 	if(linphone_chat_message_get_to_be_stored(msg)) {
 		msg->storage_id = linphone_chat_message_store(msg);
 	}
+
+	cr->pending_message = NULL;
 
 end:
 	linphone_address_unref(addr);
@@ -876,7 +882,7 @@ static void process_imdn(LinphoneChatRoom *cr, xmlparsing_context_t *xml_ctx) {
 	}
 
 	if ((message_id_str != NULL) && (datetime_str != NULL)) {
-		LinphoneChatMessage *cm = linphone_chat_room_find_message(cr, message_id_str);
+		LinphoneChatMessage *cm = linphone_chat_room_find_message_with_dir(cr, message_id_str, LinphoneChatMessageOutgoing);
 		if (cm == NULL) {
 			ms_warning("Received IMDN for unknown message %s", message_id_str);
 		} else {
@@ -1601,6 +1607,17 @@ LinphoneChatMessageState linphone_chat_message_get_state(const LinphoneChatMessa
 
 const char *linphone_chat_message_get_text(const LinphoneChatMessage *msg) {
 	return msg->message;
+}
+
+int linphone_chat_message_set_text(LinphoneChatMessage *msg, const char* text) {
+	if (msg->message)
+		ms_free(msg->message);
+	if (text)
+		msg->message = ms_strdup(text);
+	else
+		msg->message = NULL;
+	
+	return 0;
 }
 
 void linphone_chat_message_add_custom_header(LinphoneChatMessage *msg, const char *header_name,

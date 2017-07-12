@@ -1074,8 +1074,6 @@ AC_CONFIG_FILES([
 	include/Makefile
 	include/linphone/Makefile
 	coreapi/Makefile
-	coreapi/help/Makefile
-	coreapi/help/Doxyfile
 	tester/Makefile
 	gtk/Makefile
 	console/Makefile

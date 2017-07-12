@@ -131,6 +131,14 @@ void linphone_call_cbs_set_transfer_state_changed(LinphoneCallCbs *cbs, Linphone
 	cbs->transfer_state_changed_cb = cb;
 }
 
+LinphoneCallCbsAckProcessingCb linphone_call_cbs_get_ack_processing(LinphoneCallCbs *cbs){
+	return cbs->ack_processing;
+}
+
+void linphone_call_cbs_set_ack_processing(LinphoneCallCbs *cbs, LinphoneCallCbsAckProcessingCb cb){
+	cbs->ack_processing = cb;
+}
+
 
 bool_t linphone_call_state_is_early(LinphoneCallState state){
 	switch (state){
@@ -4791,6 +4799,9 @@ void linphone_call_handle_stream_events(LinphoneCall *call, int stream_index){
 			if (ms) handle_ice_events(call, ev);
 		} else if (evt==ORTP_EVENT_TELEPHONE_EVENT){
 			linphone_core_dtmf_received(call,evd->info.telephone_event);
+		} else if (evt == ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE) {
+			ms_message("Video bandwidth estimation is %i kbit/s", (int)evd->info.video_bandwidth_available / 1000);
+			//TODO
 		}
 		ortp_event_destroy(ev);
 	}
@@ -6162,3 +6173,8 @@ void linphone_call_notify_info_message_received(LinphoneCall *call, const Linpho
 	NOTIFY_IF_EXIST(info_message_received_cb, call, msg)
 	linphone_core_notify_info_received(linphone_call_get_core(call), call, msg);
 }
+
+void linphone_call_notify_ack_processing(LinphoneCall *call, void *msg, bool_t is_received) {
+	NOTIFY_IF_EXIST(ack_processing, call, msg, is_received)
+}
+

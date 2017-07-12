@@ -6273,7 +6273,7 @@ JNIEXPORT void JNICALL Java_org_linphone_core_LinphoneInfoMessageImpl_setContent
 	linphone_content_set_type(content, tmp = GetStringUTFChars(env, jtype));
 	ReleaseStringUTFChars(env, jtype, tmp);
 
-	linphone_content_set_type(content, tmp = GetStringUTFChars(env, jsubtype));
+	linphone_content_set_subtype(content, tmp = GetStringUTFChars(env, jsubtype));
 	ReleaseStringUTFChars(env, jsubtype, tmp);
 
 	linphone_content_set_string_buffer(content, tmp = GetStringUTFChars(env, jdata));
@@ -8758,6 +8758,20 @@ extern "C" jstring Java_org_linphone_core_LinphoneAccountCreatorImpl_getPrefix(J
 extern "C" jstring Java_org_linphone_core_LinphoneAccountCreatorImpl_getEmail(JNIEnv *env, jobject thiz, jlong ptr) {
 	LinphoneAccountCreator *account_creator = (LinphoneAccountCreator *)ptr;
 	const char *email = linphone_account_creator_get_email(account_creator);
+	return email ? env->NewStringUTF(email) : NULL;
+}
+
+extern "C" jint Java_org_linphone_core_LinphoneAccountCreatorImpl_setDomain(JNIEnv *env, jobject thiz, jlong ptr, jstring jdomain) {
+	const char *domain = GetStringUTFChars(env, jdomain);
+	LinphoneAccountCreator *account_creator = (LinphoneAccountCreator *)ptr;
+	LinphoneAccountCreatorDomainStatus status = linphone_account_creator_set_domain(account_creator, domain);
+	ReleaseStringUTFChars(env, jdomain, domain);
+	return (jint) status;
+}
+
+extern "C" jstring Java_org_linphone_core_LinphoneAccountCreatorImpl_getDomain(JNIEnv *env, jobject thiz, jlong ptr) {
+	LinphoneAccountCreator *account_creator = (LinphoneAccountCreator *)ptr;
+	const char *email = linphone_account_creator_get_domain(account_creator);
 	return email ? env->NewStringUTF(email) : NULL;
 }
 

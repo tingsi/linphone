@@ -272,6 +272,7 @@ static void call_received(SalOp *h){
 	SalMediaDescription *md;
 	const char * p_asserted_id;
 	LinphoneErrorInfo *ei = NULL;
+	LinphonePresenceActivity *activity = NULL;
 
 	/* Look if this INVITE is for a call that has already been notified but broken because of network failure */
 	replaced_call = look_for_broken_call_to_replace(h, lc);
@@ -302,8 +303,8 @@ static void call_received(SalOp *h){
 	to_addr=linphone_address_new(sal_op_get_to(h));
 
 	/* first check if we can answer successfully to this invite */
-	if (linphone_presence_model_get_basic_status(lc->presence_model) == LinphonePresenceBasicStatusClosed) {
-		LinphonePresenceActivity *activity = linphone_presence_model_get_activity(lc->presence_model);
+	if (linphone_presence_model_get_basic_status(lc->presence_model) == LinphonePresenceBasicStatusClosed
+		&& (activity = linphone_presence_model_get_activity(lc->presence_model))) {
 		switch (linphone_presence_activity_get_type(activity)) {
 			case LinphonePresenceActivityPermanentAbsence:
 				alt_contact = linphone_presence_model_get_contact(lc->presence_model);
@@ -816,7 +817,7 @@ static void call_updating(SalOp *op, bool_t is_update){
 }
 
 
-static void call_ack(SalOp *op){
+static void call_ack_received(SalOp *op, SalCustomHeader *ack){
 	LinphoneCore *lc=(LinphoneCore *)sal_get_user_pointer(sal_op_get_sal(op));
 	LinphoneCall *call=(LinphoneCall*)sal_op_get_user_pointer(op);
 
@@ -824,6 +825,7 @@ static void call_ack(SalOp *op){
 		ms_warning("call_ack(): no call for which an ack is expected");
 		return;
 	}
+	linphone_call_notify_ack_processing(call, ack, TRUE);
 	if (call->expect_media_in_ack){
 		switch(call->state){
 			case LinphoneCallStreamsRunning:
@@ -835,6 +837,17 @@ static void call_ack(SalOp *op){
 		}
 		process_call_accepted(lc, call, op);
 	}
+}
+
+
+static void call_ack_being_sent(SalOp *op, SalCustomHeader *ack){
+	LinphoneCall *call=(LinphoneCall*)sal_op_get_user_pointer(op);
+
+	if (call == NULL){
+		ms_warning("call_ack(): no call for which an ack is supposed to be sent");
+		return;
+	}
+	linphone_call_notify_ack_processing(call, ack, FALSE);
 }
 
 static void call_terminated(SalOp *op, const char *from){
@@ -1507,7 +1520,8 @@ SalCallbacks linphone_sal_callbacks={
 	call_rejected,
 	call_ringing,
 	call_accepted,
-	call_ack,
+	call_ack_received,
+	call_ack_being_sent,
 	call_updating,
 	call_terminated,
 	call_failure,

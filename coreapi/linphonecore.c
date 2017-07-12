@@ -817,8 +817,7 @@ static void process_response_from_post_file_log_collection(void *data, const bel
 			l = belle_http_request_listener_create_from_callbacks(&cbs, core);
 			belle_sip_object_data_set(BELLE_SIP_OBJECT(req), "http_request_listener", l, belle_sip_object_unref); // Ensure the listener object is destroyed when the request is destroyed
 			belle_http_provider_send_request(core->http_provider, req, l);
-		}
-		if (code == 200) { /* The file has been uploaded correctly, get the server reply */
+		} else if (code == 200) { /* The file has been uploaded correctly, get the server reply */
 			xmlDocPtr xmlMessageBody;
 			xmlNodePtr cur;
 			xmlChar *file_url = NULL;
@@ -849,6 +848,10 @@ static void process_response_from_post_file_log_collection(void *data, const bel
 			if (file_url != NULL) {
 				linphone_core_notify_log_collection_upload_state_changed(core, LinphoneCoreLogCollectionUploadStateDelivered, (const char *)file_url);
 			}
+			clean_log_collection_upload_context(core);
+		} else {
+			ms_error("Unexpected HTTP response code %i during log collection upload to %s", code, linphone_core_get_log_collection_upload_server_url(core));
+			linphone_core_notify_log_collection_upload_state_changed(core, LinphoneCoreLogCollectionUploadStateNotDelivered, "Unexpected HTTP response");
 			clean_log_collection_upload_context(core);
 		}
 	}
@@ -959,6 +962,7 @@ void linphone_core_upload_log_collection(LinphoneCore *core) {
 			linphone_content_unref(core->log_collection_upload_information);
 			core->log_collection_upload_information = NULL;
 			ms_error("prepare_log_collection_file_to_upload(): error.");
+			linphone_core_notify_log_collection_upload_state_changed(core, LinphoneCoreLogCollectionUploadStateNotDelivered, "Error while preparing log collection upload");
 			return;
 		}
 		linphone_content_set_size(core->log_collection_upload_information, get_size_of_file_to_upload(name));
@@ -972,8 +976,17 @@ void linphone_core_upload_log_collection(LinphoneCore *core) {
 		belle_http_provider_send_request(core->http_provider, req, l);
 		ms_free(name);
 	} else {
+		const char *msg = NULL;
 		ms_warning("Could not upload log collection: log_collection_upload_information=%p, server_url=%s, log_collection_state=%d",
 			core->log_collection_upload_information, linphone_core_get_log_collection_upload_server_url(core), liblinphone_log_collection_state);
+		if (core->log_collection_upload_information != NULL) {
+			msg = "Log collection upload already in progress";
+		} else if (linphone_core_get_log_collection_upload_server_url(core) == NULL) {
+			msg = "Log collection upload server not set";
+		} else if (liblinphone_log_collection_state == LinphoneLogCollectionDisabled) {
+			msg = "Log collection is disabled";
+		}
+		linphone_core_notify_log_collection_upload_state_changed(core, LinphoneCoreLogCollectionUploadStateNotDelivered, msg);
 	}
 }
 
@@ -1054,6 +1067,8 @@ static void net_config_read(LinphoneCore *lc) {
 	linphone_core_set_download_bandwidth(lc,tmp);
 	tmp=lp_config_get_int(config,"net","upload_bw",0);
 	linphone_core_set_upload_bandwidth(lc,tmp);
+	tmp=lp_config_get_int(config, "net", "expected_bw", 0);
+	linphone_core_set_expected_bandwidth(lc, tmp);
 
 	tmpstr=lp_config_get_string(lc->config,"net","nat_address",NULL);
 	if (tmpstr!=NULL && (strlen(tmpstr)<1)) tmpstr=NULL;
@@ -1814,6 +1829,11 @@ void linphone_core_set_upload_bandwidth(LinphoneCore *lc, int bw){
 	if (linphone_core_ready(lc)) lp_config_set_int(lc->config,"net","upload_bw",bw);
 }
 
+void linphone_core_set_expected_bandwidth(LinphoneCore *lc, int bw){
+	ms_factory_set_expected_bandwidth(lc->factory, bw * 1000); // In linphone we use kbits/s, in ms2 bits/s
+	if (linphone_core_ready(lc)) lp_config_set_int(lc->config,"net","expected_bw",bw);
+}
+
 void linphone_core_set_sip_transport_timeout(LinphoneCore *lc, int timeout_ms) {
 	sal_set_transport_timeout(lc->sal, timeout_ms);
 	if (linphone_core_ready(lc))
@@ -1855,6 +1875,7 @@ int linphone_core_get_download_bandwidth(const LinphoneCore *lc){
 int linphone_core_get_upload_bandwidth(const LinphoneCore *lc){
 	return lc->net_conf.upload_bw;
 }
+
 void linphone_core_set_download_ptime(LinphoneCore *lc, int ptime) {
 	lp_config_set_int(lc->config,"rtp","download_ptime",ptime);
 }
@@ -2389,7 +2410,7 @@ bool_t linphone_core_get_guess_hostname(LinphoneCore *lc){
 }
 
 void linphone_core_enable_lime(LinphoneCore *lc, LinphoneLimeState val){
-	LinphoneImEncryptionEngine *imee = linphone_im_encryption_engine_new(lc);
+	LinphoneImEncryptionEngine *imee = linphone_im_encryption_engine_new();
 	LinphoneImEncryptionEngineCbs *cbs = linphone_im_encryption_engine_get_callbacks(imee);
 
 	if(lime_is_available()){
@@ -5538,8 +5559,11 @@ void linphone_core_preview_ogl_render(const LinphoneCore *lc) {
 	LinphoneCall *call = linphone_core_get_current_call(lc);
 	VideoStream *stream = call ? call->videostream : lc->previewstream;
 
-	if (stream && stream->output2 && ms_filter_get_id(stream->output2) == MS_OGL_ID)
+	if (stream && stream->output2 && ms_filter_get_id(stream->output2) == MS_OGL_ID) {
+		int mirroring = TRUE;
+		ms_filter_call_method(stream->output2, MS_VIDEO_DISPLAY_ENABLE_MIRRORING, &mirroring);
 		ms_filter_call_method(stream->output2, MS_OGL_RENDER, NULL);
+	}
 
 	#endif
 }
@@ -6582,6 +6606,9 @@ void linphone_core_zrtp_cache_db_init(LinphoneCore *lc, const char *fileName) {
 #ifdef SQLITE_STORAGE_ENABLED
 	int ret;
 	const char *errmsg;
+	const char *backupExtension = "_backup";
+	char *backupName = malloc(snprintf(NULL, 0, "%s%s", fileName, backupExtension) + 1);
+	sprintf(backupName, "%s%s", fileName, backupExtension);
 	sqlite3 *db;
 
 	linphone_core_zrtp_cache_close(lc);
@@ -6591,6 +6618,8 @@ void linphone_core_zrtp_cache_db_init(LinphoneCore *lc, const char *fileName) {
 		errmsg = sqlite3_errmsg(db);
 		ms_error("Error in the opening zrtp_cache_db_file(%s): %s.\n", fileName, errmsg);
 		sqlite3_close(db);
+		unlink(backupName);
+		rename(fileName, backupName);
 		lc->zrtp_cache_db=NULL;
 		return;
 	}
@@ -6604,6 +6633,8 @@ void linphone_core_zrtp_cache_db_init(LinphoneCore *lc, const char *fileName) {
 	} else if(ret != 0) { /* something went wrong */
 		ms_error("Zrtp cache failed to initialise(returned -%x), run cacheless", -ret);
 		sqlite3_close(db);
+		unlink(backupName);
+		rename(fileName, backupName);
 		lc->zrtp_cache_db = NULL;
 		return;
 	}
@@ -7231,6 +7262,7 @@ void linphone_core_set_im_encryption_engine(LinphoneCore *lc, LinphoneImEncrypti
 		lc->im_encryption_engine = NULL;
 	}
 	if (imee) {
+		imee->lc = lc;
 		lc->im_encryption_engine = linphone_im_encryption_engine_ref(imee);
 	}
 }

@@ -64,6 +64,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "linphone/vcard.h"
 #include "linphone/video_definition.h"
 #include "linphone/xmlrpc.h"
+#include "linphone/headers.h"
 
 
 #ifdef __cplusplus
@@ -1470,6 +1471,19 @@ LINPHONE_PUBLIC void linphone_core_set_download_bandwidth(LinphoneCore *lc, int 
 LINPHONE_PUBLIC void linphone_core_set_upload_bandwidth(LinphoneCore *lc, int bw);
 
 /**
+ * Sets expected available upload bandwidth
+ * This is IP bandwidth, in kbit/s.
+ * This information is used by liblinphone together with remote
+ * side available bandwidth signaled in SDP messages to properly
+ * configure audio & video codec's output bitrate.
+ *
+ * @param lc the LinphoneCore object
+ * @param bw the bandwidth in kbits/s, 0 for infinite
+ * @ingroup media_parameters
+ */
+LINPHONE_PUBLIC void linphone_core_set_expected_bandwidth(LinphoneCore *lc, int bw);
+
+/**
  * Retrieve the maximum available download bandwidth.
  * This value was set by linphone_core_set_download_bandwidth().
  * @ingroup media_parameters
@@ -1596,7 +1610,7 @@ LINPHONE_PUBLIC bool_t linphone_core_dns_search_enabled(const LinphoneCore *lc);
 /**
  * Forces liblinphone to use the supplied list of dns servers, instead of system's ones.
  * @param[in] lc #LinphoneCore object.
- * @param[in] servers A list of strings containing the IP addresses of DNS servers to be used.
+ * @param[in] servers \bctbx_list{const char *} A list of strings containing the IP addresses of DNS servers to be used.
  * Setting to NULL restores default behaviour, which is to use the DNS server list provided by the system.
  * The list is copied internally.
  * @ingroup media_parameters
