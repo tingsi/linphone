@@ -28,8 +28,8 @@ class Reference:
 		self.cname = cname
 		self.relatedObject = None
 	
-	def translate(self, docTranslator, **params):
-		return docTranslator.translate_reference(self, **params)
+	def translate(self, docTranslator, label=None, **kargs):
+		return docTranslator.translate_reference(self, **kargs)
 
 
 class ClassReference(Reference):
@@ -172,15 +172,15 @@ class Translator:
 		self.textWidth = 80
 		self.nameTranslator = metaname.Translator.get(langCode)
 	
-	def translate_description(self, description, **kargs):
+	def translate_description(self, description, tagAsBrief=False, namespace=None):
 		if description is None:
 			return None
 		
-		paras = self._translate_description(description, **kargs)
+		paras = self._translate_description(description, namespace=namespace)
 		
 		lines = self._paragraphs_to_lines(paras)
 		
-		if 'tagAsBrief' in kargs and kargs['tagAsBrief']:
+		if tagAsBrief:
 			self._tag_as_brief(lines)
 		
 		lines = self._crop_text(lines, self.textWidth)
@@ -191,20 +191,26 @@ class Translator:
 		
 		return translatedDoc
 	
-	def _translate_description(self, desc, **kargs):
+	def translate_reference(self, ref, namespace=None):
+		if ref.relatedObject is None:
+			raise ReferenceTranslationError(ref.cname)
+		commonName = metaname.Name.find_common_parent(ref.relatedObject.name, namespace) if namespace is not None else None
+		return ref.relatedObject.name.translate(self.nameTranslator, recursive=True, topAncestor=commonName)
+	
+	def _translate_description(self, desc, namespace=None):
 		paras = []
 		for para in desc.paragraphs:
-			paras.append(para.translate(self, **kargs))
+			paras.append(para.translate(self, namespace=namespace))
 		return paras
 	
-	def _translate_paragraph(self, para, **kargs):
+	def _translate_paragraph(self, para, namespace=None):
 		strPara = ''
 		for part in para.parts:
 			try:
 				if isinstance(part, str):
 					strPara += part
 				else:
-					strPara += part.translate(self, **kargs)
+					strPara += part.translate(self, namespace=namespace)
 			except TranslationError as e:
 				print('error: {0}'.format(e.msg()))
 		
@@ -268,24 +274,25 @@ class DoxygenTranslator(Translator):
 		if len(lines) > 0:
 			lines[0] = '@brief ' + lines[0]
 	
-	def translate_reference(self, ref, **kargs):
+	def translate_reference(self, ref, namespace=None):
+		refStr = Translator.translate_reference(self, ref, namespace=namespace)
 		if isinstance(ref.relatedObject, (abstractapi.Class, abstractapi.Enum)):
-			return '#' + ref.relatedObject.name.translate(self.nameTranslator, recursive=True)
+			return '#' + refStr
 		elif isinstance(ref.relatedObject, abstractapi.Method):
-			return ref.relatedObject.name.translate(self.nameTranslator, recursive=True) + '()'
+			return refStr + '()'
 		else:
 			raise ReferenceTranslationError(ref.cname)
 	
-	def _translate_section(self, section, **kargs):
+	def _translate_section(self, section, namespace=None):
 		return '@{0} {1}'.format(
 			section.kind,
-			self._translate_paragraph(section.paragraph, **kargs)
+			self._translate_paragraph(section.paragraph, namespace=namespace)
 		)
 	
-	def _translate_parameter_list(self, parameterList, **kargs):
+	def _translate_parameter_list(self, parameterList, namespace=None):
 		text = ''
 		for paramDesc in parameterList.parameters:
-			desc = self._translate_description(paramDesc.desc, **kargs) if paramDesc.desc is not None else ['']
+			desc = self._translate_description(paramDesc.desc, namespace=namespace) if paramDesc.desc is not None else ['']
 			text = ('@param {0} {1}'.format(paramDesc.name, desc[0]))
 		return text
 
@@ -332,22 +339,19 @@ class SphinxTranslator(Translator):
 			raise ValueError("'{0}' referencer type not supported".format(typeName))
 	
 	def translate_reference(self, ref, label=None, namespace=None):
-		if ref.relatedObject is None:
-			raise ReferenceTranslationError(ref.cname)
-		
-		commonName = metaname.Name.find_common_parent(ref.relatedObject.name, namespace) if namespace is not None else None
-		_label = label if label is not None else ref.relatedObject.name.translate(self.nameTranslator, recursive=True, topAncestor=commonName)
+		strRef = Translator.translate_reference(self, ref)
+		kargs = {
+			'tag'   : self._sphinx_ref_tag(ref),
+			'ref'   : strRef,
+		}
+		kargs['label'] = label if label is not None else Translator.translate_reference(self, ref, namespace=namespace)
 		if isinstance(ref, FunctionReference):
-			_label += '()'
+			kargs['label'] += '()'
 		
-		return ':{tag}:`{label} <{ref}>`'.format(
-			tag=self._sphinx_ref_tag(ref),
-			ref=ref.relatedObject.name.translate(self.nameTranslator, recursive=True),
-			label=_label
-		)
+		return ':{tag}:`{label} <{ref}>`'.format(**kargs)
 	
-	def _translate_section(self, section, **kargs):
-		strPara = self._translate_paragraph(section.paragraph, **kargs)
+	def _translate_section(self, section, namespace=None):
+		strPara = self._translate_paragraph(section.paragraph, namespace=namespace)
 		if section.kind == 'see':
 			kind = 'seealso'
 		else:
@@ -358,10 +362,10 @@ class SphinxTranslator(Translator):
 		else:
 			return '.. {0}::\n\t\n\t{1}'.format(kind, strPara)
 	
-	def _translate_parameter_list(self, parameterList, **kargs):
+	def _translate_parameter_list(self, parameterList, namespace=None):
 		text = ''
 		for paramDesc in parameterList.parameters:
-			desc = self._translate_description(paramDesc.desc, **kargs) if paramDesc.desc is not None else ['']
+			desc = self._translate_description(paramDesc.desc, namespace=namespace) if paramDesc.desc is not None else ['']
 			text = (':param {0}: {1}'.format(paramDesc.name, desc[0]))
 		return text
 	
@@ -377,11 +381,14 @@ class SphinxTranslator(Translator):
 		
 
 
-class SandcastleCSharpTranslator(Translator):
-	def __init__(self):
-		Translator.__init__(self, None)
-	
+class SandCastleTranslator(Translator):
 	def _tag_as_brief(self, lines):
 		if len(lines) > 0:
 			lines.insert(0, '<summary>')
 			lines.append('</summary>')
+	
+	def translate_reference(self, ref, namespace=None):
+		refStr = Translator.translate_reference(self, ref, namespace=namespace)
+		if isinstance(ref, FunctionReference):
+			refStr += '()'
+		return '<see cref="{0}" />'.format(refStr)

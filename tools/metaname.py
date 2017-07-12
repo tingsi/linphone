@@ -208,6 +208,8 @@ class Translator:
 	@staticmethod
 	def get(langCode):
 		try:
+			if langCode == '':
+				raise ValueError('Empty language code')
 			if langCode not in Translator.instances:
 				className = langCode + 'Translator'
 				_class = globals()[className]
@@ -244,13 +246,19 @@ class CTranslator(Translator):
 		return name.to_c()
 
 
-class CppTranslator(Translator):
+class JavaTranslator(Translator):
+	def __init__(self):
+		self.nsSep = '.'
+		self.keyWordEscapes = {}
+		self.lowerMethodNames = True
+		self.lowerNamespaceNames = True
+	
 	def translate_class_name(self, name, recursive=False, topAncestor=None):
 		if name.prev is None or not recursive or name.prev is topAncestor:
 			return name.to_camel_case()
 		else:
 			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return name.prev.translate(self, **params) + '::' + name.to_camel_case()
+			return name.prev.translate(self, **params) + self.nsSep + name.to_camel_case()
 	
 	def translate_interface_name(self, name, **params):
 		return self.translate_class_name(name, **params)
@@ -262,25 +270,56 @@ class CppTranslator(Translator):
 		return self.translate_enum_name(name.prev, **params) + name.to_camel_case()
 	
 	def translate_method_name(self, name, recursive=False, topAncestor=None):
-		translatedName = name.to_camel_case(lower=True)
-		if translatedName == 'new':
-			translatedName = '_new'
+		translatedName = name.to_camel_case(lower=self.lowerMethodNames)
+		translatedName = self._escape_keyword(translatedName)
 		
 		if name.prev is None or not recursive or name.prev is topAncestor:
 			return translatedName
 		else:
 			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return name.prev.translate(self, **params) + '::' + translatedName
+			return name.prev.translate(self, **params) + self.nsSep + translatedName
 	
 	def translate_namespace_name(self, name, recursive=False, topAncestor=None):
+		translatedName = name.concatenate() if self.lowerNamespaceNames else name.to_camel_case()
 		if name.prev is None or not recursive or name.prev is topAncestor:
-			return name.concatenate()
+			return translatedName
 		else:
 			params = {'recursive': recursive, 'topAncestor': topAncestor}
-			return name.prev.translate(self, **params) + '::' + name.concatenate()
+			return name.prev.translate(self, **params) + self.nsSep + translatedName
 	
 	def translate_argument_name(self, name):
-		return name.to_camel_case(lower=True)
+		argname = name.to_camel_case(lower=True)
+		return self._escape_keyword(argname)
 	
 	def translate_property_name(self, name):
 		return self.translate_argument_name(name)
+	
+	def _escape_keyword(self, keyword):
+		try:
+			return self.keyWordEscapes[keyword]
+		except KeyError:
+			return keyword
+
+
+class CppTranslator(JavaTranslator):
+	def __init__(self):
+		JavaTranslator.__init__(self)
+		self.nsSep = '::'
+		self.keyWordEscapes = {'new' : '_new'}
+
+
+class CSharpTranslator(JavaTranslator):
+	def __init__(self):
+		JavaTranslator.__init__(self)
+		self.keyWordEscapes = {
+			'params' : 'parameters',
+			'event'  : 'ev',
+			'ref'    : 'reference',
+			'value'  : 'val',
+			'new'    : '_new'
+		}
+		self.lowerMethodNames = False
+		self.lowerNamespaceNames = False
+	
+	def translate_property_name(self, name):
+		return name.to_camel_case()
