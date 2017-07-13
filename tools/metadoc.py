@@ -28,7 +28,7 @@ class Reference:
 		self.cname = cname
 		self.relatedObject = None
 	
-	def translate(self, docTranslator, label=None, **kargs):
+	def translate(self, docTranslator, **kargs):
 		return docTranslator.translate_reference(self, **kargs)
 
 
