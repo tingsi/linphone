@@ -300,30 +300,38 @@ class DoxygenTranslator(Translator):
 class SphinxTranslator(Translator):
 	def __init__(self, langCode):
 		Translator.__init__(self, langCode)
-		if isinstance(self.nameTranslator, metaname.CTranslator):
-			self.namespace = 'c'
+		if langCode == 'C':
+			self.domain = 'c'
 			self.classDeclarator = 'type'
 			self.methodDeclarator = 'function'
 			self.enumDeclarator = 'type'
 			self.enumeratorDeclarator = 'var'
 			self.enumeratorReferencer = 'data'
-		elif isinstance(self.nameTranslator, metaname.CppTranslator):
-			self.namespace = 'cpp'
+			self.methodReferencer = 'func'
+		elif langCode == 'Cpp':
+			self.domain = 'cpp'
 			self.classDeclarator = 'class'
 			self.methodDeclarator = 'function'
 			self.enumDeclarator = 'enum'
 			self.enumeratorDeclarator = 'enumerator'
 			self.namespaceDeclarator = 'namespace'
+			self.methodReferencer = 'func'
+		elif langCode == 'CSharp':
+			self.domain = 'csharp'
+			self.classDeclarator = 'class'
+			self.methodDeclarator = 'method'
+			self.enumDeclarator = 'enum'
+			self.enumeratorDeclarator = 'value'
+			self.namespaceDeclarator = 'namespace'
+			self.methodReferencer = 'meth'
 		else:
-			TypeError('not suppored name translator: ' + str(self.nameTranslator))
-		
-		self.methodReferencer = 'func'
+			raise ValueError('invalid language code: {0}'.format(langCode))
 	
 	def get_declarator(self, typeName):
 		try:
 			attrName = typeName + 'Declarator'
 			declarator = getattr(self, attrName)
-			return '{0}:{1}'.format(self.namespace, declarator)
+			return '{0}:{1}'.format(self.domain, declarator)
 		except AttributeError:
 			raise ValueError("'{0}' declarator type not supported".format(typeName))
 	
@@ -332,7 +340,7 @@ class SphinxTranslator(Translator):
 			attrName = typeName + 'Referencer'
 			if attrName in dir(self):
 				referencer = getattr(self, attrName)
-				return '{0}:{1}'.format(self.namespace, referencer)
+				return '{0}:{1}'.format(self.domain, referencer)
 			else:
 				return self.get_declarator(typeName)
 		except AttributeError:

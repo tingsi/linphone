@@ -59,6 +59,8 @@ class LangInfo:
 			return 'C'
 		elif langCode == 'Cpp':
 			return 'C++'
+		elif langCode == 'CSharp':
+			return 'C#'
 		else:
 			raise ValueError("Invalid language code: '{0}'".format(langCode))
 
@@ -205,7 +207,8 @@ class DocGenerator:
 		self.api = api
 		self.languages = [
 			LangInfo('C'),
-			LangInfo('Cpp')
+			LangInfo('Cpp'),
+			LangInfo('CSharp')
 		]
 	
 	def generate(self, outputdir):

@@ -1,3 +1,4 @@
+
 # Copyright (C) 2017 Belledonne Communications SARL
 # 
 # This program is free software; you can redistribute it and/or
@@ -935,3 +936,104 @@ class CppLangTranslator(CLikeLangTranslator):
 			args=argsString,
 			const=' const' if method.isconst else ''
 		)
+
+
+class CSharpLangTranslator(CLikeLangTranslator):
+	def __init__(self):
+		self.nameTranslator = metaname.Translator.get('CSharp')
+	
+	def translate_base_type(self, _type, dllImport=True):
+		if _type.name == 'void':
+				if _type.isref:
+					return 'IntPtr'
+				return 'void'
+		elif _type.name == 'status':
+			if dllImport:
+				return 'int'
+			else:
+				return 'void'
+		elif _type.name == 'boolean':
+			if dllImport:
+				res = 'int' # In C the bool_t is an integer
+			else:
+				res = 'bool'
+		elif _type.name == 'integer':
+			if _type.isUnsigned:
+				res = 'uint'
+			else:
+				res = 'int'
+		elif _type.name == 'string':
+			if dllImport:
+				if _type.parent is not Argument:
+					return 'string'
+				else:
+					res = 'IntPtr' # Return as IntPtr and get string with Marshal.PtrToStringAnsi()
+			else:
+				return 'string'
+		elif _type.name == 'character':
+			if _type.isUnsigned:
+				res = 'byte'
+			else:
+				res = 'sbyte'
+		elif _type.name == 'time':
+			res = 'long' #TODO check
+		elif _type.name == 'size':
+			res = 'long' #TODO check
+		elif _type.name == 'floatant':
+			return 'float'
+		elif _type.name == 'string_array':
+			if dllImport or _type.parent is not Argument:
+				return 'IntPtr'
+			else:
+				return 'IEnumerable<string>'
+		else:
+			raise Error('\'{0}\' is not a base abstract type'.format(_type.name))
+		
+		return res
+	
+	def translate_enum_type(self, _type, dllImport=True):
+		if dllImport and _type.parent is not Argument:
+			return 'int'
+		else:
+			return _type.desc.name.translate(self.nameTranslator)
+	
+	def translate_class_type(self, _type, dllImport=True):
+		return "IntPtr" if dllImport else _type.desc.name.translate(self.nameTranslator)
+	
+	def translate_list_type(self, _type, dllImport=True):
+		if dllImport:
+			return 'IntPtr'
+		else:
+			if type(_type.containedTypeDesc) is BaseType:
+				if _type.containedTypeDesc.name == 'string':
+					return 'IEnumerable<string>'
+				else:
+					raise Error('translation of bctbx_list_t of basic C types is not supported')
+			elif type(_type.containedTypeDesc) is ClassType:
+				ptrType = _type.containedTypeDesc.desc.name.translate(self.nameTranslator)
+				return 'IEnumerable<' + ptrType + '>'
+			else:
+				if _type.containedTypeDesc:
+					raise Error('translation of bctbx_list_t of enums')
+				else:
+					raise Error('translation of bctbx_list_t of unknow type !')
+	
+	def translate_argument(self, arg, dllImport=True):
+		return '{0} {1}'.format(
+			arg.type.translate(self, dllImport=dllImport),
+			arg.name.translate(self.nameTranslator)
+		)
+	
+	def translate_method_as_prototype(self, method):
+		kargs = {
+			'static'     : 'static ' if method.type == Method.Type.Class else '',
+			'override'   : 'override ' if method.name.translate(self.nameTranslator) == 'ToString' else '',
+			'returnType' : method.returnType.translate(self, dllImport=False),
+			'name'       : method.name.translate(self.nameTranslator),
+			'args'       : ''
+		}
+		for arg in method.args:
+			if kargs['args'] != '':
+				kargs['args'] += ', '
+			kargs['args'] += arg.translate(self, dllImport=False)
+		return '{static}{override}{returnType} {name}({args})'.format(**kargs)
