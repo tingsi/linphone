@@ -267,7 +267,7 @@ class JavaTranslator(Translator):
 		return self.translate_class_name(name, **params)
 	
 	def translate_enumerator_name(self, name, **params):
-		return self.translate_enum_name(name.prev, **params) + name.to_camel_case()
+		return self.translate_class_name(name, **params)
 	
 	def translate_method_name(self, name, recursive=False, topAncestor=None):
 		translatedName = name.to_camel_case(lower=self.lowerMethodNames)
@@ -306,6 +306,9 @@ class CppTranslator(JavaTranslator):
 		JavaTranslator.__init__(self)
 		self.nsSep = '::'
 		self.keyWordEscapes = {'new' : '_new'}
+	
+	def translate_enumerator_name(self, name, **params):
+		return self.translate_enum_name(name.prev, **params) + name.to_camel_case()
 
 
 class CSharpTranslator(JavaTranslator):

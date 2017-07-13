@@ -323,6 +323,9 @@ class SphinxTranslator(Translator):
 			self.enumDeclarator = 'enum'
 			self.enumeratorDeclarator = 'value'
 			self.namespaceDeclarator = 'namespace'
+			self.classReferencer = 'type'
+			self.enumReferencer = 'type'
+			self.enumeratorReferencer = 'enum'
 			self.methodReferencer = 'meth'
 		else:
 			raise ValueError('invalid language code: {0}'.format(langCode))

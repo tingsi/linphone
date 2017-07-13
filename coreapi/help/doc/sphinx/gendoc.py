@@ -145,11 +145,11 @@ class EnumsPage(SphinxPage):
 			translatedEnum = {
 				'name'         : enum.name.translate(self.lang.nameTranslator),
 				'fullName'     : enum.name.translate(self.lang.nameTranslator, recursive=True),
-				'namespace'    : self._get_translated_namespace(enum),
 				'briefDesc'    : enum.briefDescription.translate(self.docTranslator),
 				'enumerators'  : self._translate_enum_values(enum),
 				'selector'    : self._make_selector(enum)
 			}
+			translatedEnum['namespace'] = self._get_translated_namespace(enum) if self.lang.langCode == 'Cpp' else translatedEnum['fullName']
 			translatedEnum['sectionName'] = RstTools.make_section(translatedEnum['name'])
 			self.enums.append(translatedEnum)
 	
