@@ -465,6 +465,8 @@ class CParser(object):
 			self._fix_doc(_class)
 		for enum in self.enumsIndex.values():
 			self._fix_doc(enum)
+			for enumerator in enum.enumerators:
+				self._fix_doc(enumerator)
 		for method in self.methodsIndex.values():
 			self._fix_doc(method)
 	
