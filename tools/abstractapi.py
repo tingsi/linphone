@@ -57,7 +57,7 @@ class BaseType(Type):
 		self.isUnsigned = isUnsigned
 	
 	def translate(self, translator, **params):
-		return translator.translate_base_type(self)
+		return translator.translate_base_type(self, **params)
 
 
 class EnumType(Type):
@@ -94,7 +94,7 @@ class ListType(Type):
 	containedTypeDesc = property(fset=_set_contained_type_desc, fget=_get_contained_type_desc)
 	
 	def translate(self, translator, **params):
-		return translator.translate_list_type(self)
+		return translator.translate_list_type(self, **params)
 
 
 class DocumentableObject(Object):
@@ -966,7 +966,7 @@ class CSharpLangTranslator(CLikeLangTranslator):
 				res = 'int'
 		elif _type.name == 'string':
 			if dllImport:
-				if _type.parent is not Argument:
+				if type(_type.parent) is Argument:
 					return 'string'
 				else:
 					res = 'IntPtr' # Return as IntPtr and get string with Marshal.PtrToStringAnsi()
@@ -984,7 +984,7 @@ class CSharpLangTranslator(CLikeLangTranslator):
 		elif _type.name == 'floatant':
 			return 'float'
 		elif _type.name == 'string_array':
-			if dllImport or _type.parent is not Argument:
+			if dllImport or type(_type.parent) is Argument:
 				return 'IntPtr'
 			else:
 				return 'IEnumerable<string>'
@@ -994,7 +994,7 @@ class CSharpLangTranslator(CLikeLangTranslator):
 		return res
 	
 	def translate_enum_type(self, _type, dllImport=True):
-		if dllImport and _type.parent is not Argument:
+		if dllImport and type(_type.parent) is Argument:
 			return 'int'
 		else:
 			return _type.desc.name.translate(self.nameTranslator)

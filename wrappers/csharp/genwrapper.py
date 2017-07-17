@@ -128,7 +128,7 @@ class CsharpTranslator(object):
 						methodDict['impl']['c_args'] += '(int)' + arg.name.translate(self.nameTranslator)
 				elif arg.type.translate(self.langTranslator, dllImport=False) == "bool":
 					methodDict['impl']['c_args'] += arg.name.translate(self.nameTranslator) + " ? 1 : 0"
-				elif self.get_class_array_type(arg.type.translate(self.langTranslator, dllIpmort=False)) is not None:
+				elif self.get_class_array_type(arg.type.translate(self.langTranslator, dllImport=False)) is not None:
 					listtype = self.get_class_array_type(arg.type.translate(self.langTranslator, dllImport=False))
 					if listtype == 'string':
 						methodDict['impl']['c_args'] += "StringArrayToBctbxList(" + arg.name.translate(self.nameTranslator) + ")"
@@ -146,7 +146,7 @@ class CsharpTranslator(object):
 		methodDict = self.translate_method(prop, static, False)
 
 		methodDict['property_static'] = 'static ' if static else ''
-		methodDict['property_return'] = prop.returnType.translate(self.langTranslator)
+		methodDict['property_return'] = prop.returnType.translate(self.langTranslator, dllImport=False)
 		methodDict['property_name'] = (name[3:] if len(name) > 3 else 'Instance') if name[:3] == "Get" else name
 
 		methodDict['has_property'] = True
@@ -177,7 +177,7 @@ class CsharpTranslator(object):
 		methodDict = self.translate_method(prop, static, False)
 
 		methodDict['property_static'] = 'static ' if static else ''
-		methodDict['property_return'] = prop.args[0].type.translate(self.langTranslator)
+		methodDict['property_return'] = prop.args[0].type.translate(self.langTranslator, dllImport=False)
 		methodDict['property_name'] = (name[3:] if len(name) > 3 else 'Instance') if name[:3] == "Set" else name
 
 		methodDict['has_property'] = True
@@ -201,7 +201,7 @@ class CsharpTranslator(object):
 		return methodDict
 
 	def translate_property_getter_setter(self, getter, setter, name, static=False):
-		methodDict = self.translate_property_getter(getter, name, static)
+		methodDict = self.translate_property_getter(getter, name, static=static)
 		methodDictSet = self.translate_property_setter(setter, name, static)
 
 		protoElems = {}
@@ -260,7 +260,7 @@ class CsharpTranslator(object):
 		listenerDict['delegate']['params'] = ""
 		for arg in method.args:
 			dllImportType = arg.type.translate(self.langTranslator, dllImport=True)
-			normalType = arg.type.translate(self.langTranslator)
+			normalType = arg.type.translate(self.langTranslator, dllImport=False)
 
 			argName = arg.name.translate(self.nameTranslator)
 			if arg != method.args[0]:
@@ -273,9 +273,9 @@ class CsharpTranslator(object):
 				else:
 					if normalType == "bool":
 						listenerDict['delegate']['params'] += argName + " == 0"
-					elif self.is_linphone_type(arg.type, True, False) and type(arg.type) is AbsApi.ClassType:
+					elif self.is_linphone_type(arg.type, True, dllImport=False) and type(arg.type) is AbsApi.ClassType:
 						listenerDict['delegate']['params'] += "fromNativePtr<" + normalType + ">(" + argName + ")"
-					elif self.is_linphone_type(arg.type, True, False) and type(arg.type) is AbsApi.EnumType:
+					elif self.is_linphone_type(arg.type, True, dllImport=False) and type(arg.type) is AbsApi.EnumType:
 						listenerDict['delegate']['params'] += "(" + normalType + ")" + argName + ""
 					else:
 						raise("Error")
