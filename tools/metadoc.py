@@ -384,12 +384,13 @@ class SphinxTranslator(Translator):
 		typeName = type(ref.relatedObject).__name__.lower()
 		return self.get_referencer(typeName)
 	
+	isParamDescRegex = re.compile('\t*:(?:param\s+\w+|return):')
+	
 	def _split_line(self, line, width):
-		if re.match('\t*:param\s+\w+:', line) is None:
-			return Translator._split_line(self, line, width)
-		else:
+		if SphinxTranslator.isParamDescRegex.match(line) is not None:
 			return Translator._split_line(self, line, width, indent=True)
-		
+		else:
+			return Translator._split_line(self, line, width)
 
 
 class SandCastleTranslator(Translator):
