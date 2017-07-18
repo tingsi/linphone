@@ -142,7 +142,9 @@ class Parser:
 			
 			text = partNode.tail
 			if text is not None:
-				paragraph.parts.append(text)
+				text = text.strip('\n')
+				if len(text) > 0:
+					paragraph.parts.append(text)
 		
 		return paragraph
 	
@@ -369,15 +371,16 @@ class SphinxTranslator(Translator):
 			kind = section.kind
 		
 		if section.kind == 'return':
-			return ':return: {0}'.format(strPara)
+			return ':return: {0}\n\n'.format(strPara)
 		else:
-			return '.. {0}::\n\t\n\t{1}'.format(kind, strPara)
+			return '.. {0}::\n\t\n\t{1}\n\n'.format(kind, strPara)
 	
 	def _translate_parameter_list(self, parameterList, namespace=None):
-		text = ''
+		text = '\n'
 		for paramDesc in parameterList.parameters:
 			desc = self._translate_description(paramDesc.desc, namespace=namespace) if paramDesc.desc is not None else ['']
-			text = (':param {0}: {1}'.format(paramDesc.name, desc[0]))
+			text += (':param {0}: {1}\n'.format(paramDesc.name, desc[0]))
+		text += '\n'
 		return text
 	
 	def _sphinx_ref_tag(self, ref):
@@ -388,7 +391,10 @@ class SphinxTranslator(Translator):
 	
 	def _split_line(self, line, width):
 		if SphinxTranslator.isParamDescRegex.match(line) is not None:
-			return Translator._split_line(self, line, width, indent=True)
+			lines = Translator._split_line(self, line, width, indent=True)
+			if len(lines) > 1:
+				lines.append('')
+			return lines
 		else:
 			return Translator._split_line(self, line, width)
 
