@@ -200,6 +200,7 @@ endif()
 include_directories(
 	include/
 	coreapi/
+	src/
 	${CMAKE_CURRENT_BINARY_DIR}
 	${CMAKE_CURRENT_BINARY_DIR}/coreapi/
 )

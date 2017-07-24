@@ -35,6 +35,12 @@ endif()
 
 
 set(LINPHONE_PRIVATE_HEADER_FILES
+	../src/cpim/cpim-grammar.h
+	../src/cpim/cpim-message.h
+	../src/cpim/cpim-parser.h
+	../src/object/object.h
+	../src/object/singleton.h
+	../src/utils/general.h
 	bellesip_sal/sal_impl.h
 	carddav.h
 	conference_private.h
@@ -51,6 +57,9 @@ set(LINPHONE_PRIVATE_HEADER_FILES
 )
 
 set(LINPHONE_SOURCE_FILES_C
+	../src/cpim/cpim-grammar.cpp
+	../src/cpim/cpim-message.cpp
+	../src/cpim/cpim-parser.cpp
 	account_creator.c
 	account_creator_service.c
 	address.c
@@ -232,7 +241,7 @@ if(ENABLE_SHARED)
 			MACOSX_FRAMEWORK_IDENTIFIER org.linphone.linphone
   			MACOSX_FRAMEWORK_INFO_PLIST Info.plist.in
 			PUBLIC_HEADER "${LINPHONE_HEADER_FILES}"
-		) 
+		)
 	endif()
 	if(BELCARD_FOUND)
 		if(APPLE)
